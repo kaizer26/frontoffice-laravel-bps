@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penilaian Layanan FO BPS</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1e40af;
+            --secondary: #3b82f6;
+            --bg: #f8fafc;
+            --text: #1e293b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .rating-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            max-width: 500px;
+            width: 100%;
+            overflow: hidden;
+            border: none;
+        }
+
+        .card-header-accent {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            padding: 40px 20px;
+            text-align: center;
+            color: white;
+        }
+
+        .card-header-accent h2 {
+            font-weight: 700;
+            margin-bottom: 5px;
+            font-size: 1.5rem;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        /* Star Rating CSS */
+        .stars {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stars input {
+            display: none;
+        }
+
+        .stars label {
+            font-size: 35px;
+            color: #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .stars label:hover,
+        .stars label:hover~label,
+        .stars input:checked~label {
+            color: #fbbf24;
+            transform: scale(1.1);
+        }
+
+        .stars label:active {
+            transform: scale(0.9);
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(30, 64, 175, 0.3);
+        }
+
+        .success-state {
+            display: none;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .success-icon {
+            font-size: 60px;
+            color: #22c55e;
+            margin-bottom: 20px;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="rating-card position-relative">
+        <div class="loading-overlay" id="loader">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+
+        <!-- Form State -->
+        <div id="form-container">
+            <div class="card-header-accent">
+                <i class="fas fa-building-columns fa-2x mb-3"></i>
+                <h2>Penilaian Layanan</h2>
+                <p class="mb-0 opacity-75">Front Office BPS Kabupaten/Kota</p>
+            </div>
+
+            <div class="card-body">
+                <form id="ratingForm">
+                    <input type="hidden" name="token" value="<?= token ?>">
+
+                    <!-- Criteria 1: Keramahan -->
+                    <div class="mb-4 text-center">
+                        <label class="form-label fw-bold d-block mb-1">1. Keramahan Petugas</label>
+                        <div class="stars" id="stars-keramahan">
+                            <input type="radio" id="keramahan-5" name="keramahan" value="5" required />
+                            <label for="keramahan-5" title="Sangat Baik"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="keramahan-4" name="keramahan" value="4" />
+                            <label for="keramahan-4" title="Baik"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="keramahan-3" name="keramahan" value="3" />
+                            <label for="keramahan-3" title="Cukup"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="keramahan-2" name="keramahan" value="2" />
+                            <label for="keramahan-2" title="Kurang"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="keramahan-1" name="keramahan" value="1" />
+                            <label for="keramahan-1" title="Buruk"><i class="fas fa-star"></i></label>
+                        </div>
+                    </div>
+
+                    <!-- Criteria 2: Kecepatan -->
+                    <div class="mb-4 text-center">
+                        <label class="form-label fw-bold d-block mb-1">2. Kecepatan Layanan</label>
+                        <div class="stars" id="stars-kecepatan">
+                            <input type="radio" id="kecepatan-5" name="kecepatan" value="5" required />
+                            <label for="kecepatan-5" title="Sangat Cepat"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="kecepatan-4" name="kecepatan" value="4" />
+                            <label for="kecepatan-4" title="Cepat"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="kecepatan-3" name="kecepatan" value="3" />
+                            <label for="kecepatan-3" title="Cukup"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="kecepatan-2" name="kecepatan" value="2" />
+                            <label for="kecepatan-2" title="Lama"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="kecepatan-1" name="kecepatan" value="1" />
+                            <label for="kecepatan-1" title="Sangat Lama"><i class="fas fa-star"></i></label>
+                        </div>
+                    </div>
+
+                    <!-- Criteria 3: Pengetahuan -->
+                    <div class="mb-4 text-center">
+                        <label class="form-label fw-bold d-block mb-1">3. Pengetahuan Petugas</label>
+                        <div class="stars" id="stars-pengetahuan">
+                            <input type="radio" id="pengetahuan-5" name="pengetahuan" value="5" required />
+                            <label for="pengetahuan-5" title="Sangat Menguasai"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="pengetahuan-4" name="pengetahuan" value="4" />
+                            <label for="pengetahuan-4" title="Menguasai"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="pengetahuan-3" name="pengetahuan" value="3" />
+                            <label for="pengetahuan-3" title="Cukup"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="pengetahuan-2" name="pengetahuan" value="2" />
+                            <label for="pengetahuan-2" title="Kurang"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="pengetahuan-1" name="pengetahuan" value="1" />
+                            <label for="pengetahuan-1" title="Tidak Tahu"><i class="fas fa-star"></i></label>
+                        </div>
+                    </div>
+
+                    <!-- Criteria 4: Keseluruhan -->
+                    <div class="mb-4 text-center p-3 bg-light rounded-3">
+                        <label class="form-label fw-bold d-block mb-1">4. Kepuasan Keseluruhan</label>
+                        <div class="stars" id="stars-keseluruhan">
+                            <input type="radio" id="keseluruhan-5" name="keseluruhan" value="5" required />
+                            <label for="keseluruhan-5" title="Sangat Puas"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="keseluruhan-4" name="keseluruhan" value="4" />
+                            <label for="keseluruhan-4" title="Puas"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="keseluruhan-3" name="keseluruhan" value="3" />
+                            <label for="keseluruhan-3" title="Cukup"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="keseluruhan-2" name="keseluruhan" value="2" />
+                            <label for="keseluruhan-2" title="Tidak Puas"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="keseluruhan-1" name="keseluruhan" value="1" />
+                            <label for="keseluruhan-1" title="Sangat Tidak Puas"><i class="fas fa-star"></i></label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Komentar atau Saran (Opsional)</label>
+                        <textarea class="form-control" name="komentar" rows="3"
+                            placeholder="Berikan masukan Anda..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 btn-submit">
+                        Kirim Penilaian <i class="fas fa-paper-plane ms-2"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Success State -->
+        <div id="success-container" class="success-state">
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h3>Terima Kasih!</h3>
+            <p class="text-muted">Penilaian Anda sangat berharga bagi peningkatan kualitas layanan kami.</p>
+            <button class="btn btn-outline-primary mt-3" onclick="window.close()">Tutup Halaman</button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('ratingForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const loader = document.getElementById('loader');
+            const formContainer = document.getElementById('form-container');
+            const successContainer = document.getElementById('success-container');
+
+            loader.style.display = 'flex';
+
+            const formData = {
+                token: document.querySelector('input[name="token"]').value,
+                keramahan: document.querySelector('input[name="keramahan"]:checked').value,
+                kecepatan: document.querySelector('input[name="kecepatan"]:checked').value,
+                pengetahuan: document.querySelector('input[name="pengetahuan"]:checked').value,
+                keseluruhan: document.querySelector('input[name="keseluruhan"]:checked').value,
+                komentar: document.querySelector('textarea[name="komentar"]').value
+            };
+
+            google.script.run
+                .withSuccessHandler(function (response) {
+                    loader.style.display = 'none';
+                    if (response.success) {
+                        formContainer.style.display = 'none';
+                        successContainer.style.display = 'block';
+                    } else {
+                        alert('Terjadi kesalahan: ' + response.message);
+                    }
+                })
+                .withFailureHandler(function (err) {
+                    loader.style.display = 'none';
+                    alert('Gagal mengirim: ' + err.message);
+                })
+                .saveRating(formData);
+        });
+    </script>
+
+</body>
+
+</html>
