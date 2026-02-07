@@ -40,24 +40,32 @@ class RatingSyncController extends Controller
                     $exists = PenilaianPetugas::where('buku_tamu_id', $bukuTamu->id)->exists();
                     
                     if (!$exists) {
+                        // Determine which officer is being rated (Online vs Langsung)
+                        $officerId = ($bukuTamu->sarana_kunjungan === 'Online' && $bukuTamu->online_channel === 'Pegawai' && $bukuTamu->petugas_online_id) 
+                            ? $bukuTamu->petugas_online_id 
+                            : $bukuTamu->user_id;
+
                         // Create rating
                         PenilaianPetugas::create([
                             'buku_tamu_id' => $bukuTamu->id,
-                            'user_id' => $bukuTamu->user_id,
+                            'user_id' => $officerId,
                             'rating_keramahan' => $item['keramahan'],
                             'rating_kecepatan' => $item['kecepatan'],
                             'rating_pengetahuan' => $item['pengetahuan'],
                             'rating_keseluruhan' => $item['keseluruhan'],
                             'komentar' => $item['komentar'],
-                            'waktu_penilaian' => now(),
                         ]);
 
                         // Mark local buku tamu as rated
                         $bukuTamu->update(['rated' => true]);
                         $successCount++;
+                    } else {
+                        Log::info("Rating sync: Skip token {$item['token']} because rating already exists for buku_tamu_id {$bukuTamu->id}");
                     }
                     
                     $syncedRows[] = $item['row'];
+                } else {
+                    Log::warning("Rating sync: Token {$item['token']} not found in buku_tamu table.");
                 }
             }
 

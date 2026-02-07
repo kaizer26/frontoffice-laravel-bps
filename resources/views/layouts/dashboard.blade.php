@@ -209,16 +209,78 @@
             from { transform: translateX(100px); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 991.98px) {
+            .sidebar {
+                left: -250px;
+                transition: var(--transition);
+                box-shadow: 10px 0 15px rgba(0,0,0,0.1);
+            }
+            
+            .sidebar.show {
+                left: 0;
+            }
+            
+            .main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+                padding: 15px !important;
+            }
+            
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 999;
+                backdrop-filter: blur(2px);
+            }
+            
+            .sidebar-overlay.show {
+                display: block;
+            }
+            
+            /* Font size adjustments */
+            html {
+                font-size: 14px;
+            }
+            
+            .stat-value {
+                font-size: 1.5rem;
+            }
+            
+            h1.h3 {
+                font-size: 1.25rem;
+            }
+            
+            .user-profile-pill {
+                padding: 2px !important;
+            }
+            
+            .profile-thumb {
+                width: 30px !important;
+                height: 30px !important;
+            }
+        }
     </style>
+    @stack('styles')
 </head>
 <body>
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div class="d-flex">
         @yield('sidebar')
         
         <div class="main-content">
             <!-- Global Header -->
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <div class="d-flex align-items-center flex-grow-1">
+                <div class="d-flex align-items-center flex-grow-1 gap-2">
+                    <button class="btn btn-outline-primary d-lg-none" onclick="toggleSidebar()" type="button">
+                        <i class="fas fa-bars"></i>
+                    </button>
                     @yield('title_section')
                 </div>
                 <div class="header-actions d-flex align-items-center gap-3">
@@ -279,6 +341,19 @@
                     toast.onmouseleave = Swal.resumeTimer;
                 }
             });
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('show');
+            overlay.classList.toggle('show');
+            
+            if (sidebar.classList.contains('show')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
         }
 
         function formatPhoneNumber(input) {

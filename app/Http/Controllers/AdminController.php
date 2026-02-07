@@ -7,6 +7,9 @@ use App\Models\PenilaianPetugas;
 use App\Models\User;
 use App\Models\Pegawai;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Response;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -21,12 +24,22 @@ class AdminController extends Controller
         return view('admin.dashboard');
     }
 
-    public function jadwal()
+    public function jadwal(Request $request)
     {
-        $jadwal = JadwalPetugas::with('user')
-            ->orderBy('tanggal', 'desc')
+        $query = JadwalPetugas::with('user');
+
+        if ($request->filled('start_date')) {
+            $query->whereDate('tanggal', '>=', $request->start_date);
+        }
+
+        if ($request->filled('end_date')) {
+            $query->whereDate('tanggal', '<=', $request->end_date);
+        }
+
+        $jadwal = $query->orderBy('tanggal', 'desc')
             ->orderBy('shift')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         $petugas = User::where('role', 'petugas')
             ->where('status', 'aktif')
@@ -172,7 +185,13 @@ class AdminController extends Controller
             ];
         });
 
-        $years = DB::table('buku_tamu')
+    // Sort by total desc, then selesai desc
+    $rekap = $rekap->sortBy([
+        ['total', 'desc'],
+        ['selesai', 'desc'],
+    ]);
+
+    $years = DB::table('buku_tamu')
             ->select(DB::raw("strftime('%Y', waktu_kunjungan) as year"))
             ->distinct()
             ->orderBy('year', 'desc')
@@ -181,6 +200,75 @@ class AdminController extends Controller
         if ($years->isEmpty()) $years = [date('Y')];
 
         return view('admin.rekap', compact('rekap', 'year', 'quarter', 'years'));
+    }
+
+    public function exportRekap(Request $request)
+    {
+        $year = $request->input('year', date('Y'));
+        $quarter = $request->input('quarter', ceil(date('n') / 3));
+
+        $months = match((int)$quarter) {
+            1 => [1, 2, 3],
+            2 => [4, 5, 6],
+            3 => [7, 8, 9],
+            4 => [10, 11, 12],
+            default => [1, 2, 3],
+        };
+
+        $officers = \App\Models\User::where('role', 'petugas')->get();
+        $data = [];
+
+        foreach ($officers as $officer) {
+            $baseQuery = \App\Models\BukuTamu::where('user_id', $officer->id)
+                ->whereYear('waktu_kunjungan', $year)
+                ->whereIn(\DB::raw('strftime("%m", waktu_kunjungan)'), array_map(fn($m) => str_pad($m, 2, '0', STR_PAD_LEFT), $months));
+
+            $total = (clone $baseQuery)->count();
+            $pst = (clone $baseQuery)->where('sarana_kunjungan', 'Langsung')->count();
+            $online = (clone $baseQuery)->where('sarana_kunjungan', 'Online')->count();
+            $selesai = (clone $baseQuery)->whereHas('permintaanData', function($q) {
+                $q->where('status_layanan', 'Selesai');
+            })->count();
+
+            $rating = \App\Models\PenilaianPetugas::where('user_id', $officer->id)
+                ->whereYear('created_at', $year)
+                ->whereIn(\DB::raw('strftime("%m", created_at)'), array_map(fn($m) => str_pad($m, 2, '0', STR_PAD_LEFT), $months))
+                ->avg('rating_keseluruhan') ?? 0;
+
+            $data[] = [
+                'Nama Petugas' => $officer->name,
+                'Email' => $officer->email,
+                'Layanan PST' => $pst,
+                'Layanan Online' => $online,
+                'Total Layanan' => $total,
+                'Total Selesai' => $selesai,
+                'Rata-rata Rating' => number_format($rating, 2),
+                'Persentase Selesai' => ($total > 0 ? round(($selesai / $total) * 100, 1) : 0) . '%'
+            ];
+        }
+
+        $filename = "Rekap_Layanan_{$year}_Q{$quarter}.csv";
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $callback = function() use ($data) {
+            $file = fopen('php://output', 'w');
+            
+            // Add BOM for Excel UTF-8 support
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            if (!empty($data)) {
+                fputcsv($file, array_keys($data[0]));
+                foreach ($data as $row) {
+                    fputcsv($file, $row);
+                }
+            }
+            fclose($file);
+        };
+
+        return Response::stream($callback, 200, $headers);
     }
 
     public function pegawai()
@@ -302,6 +390,10 @@ class AdminController extends Controller
 
     public function downloadJadwalTemplate()
     {
+        if (!class_exists('ZipArchive')) {
+            return redirect()->back()->with('error', 'Error: Class "ZipArchive" tidak ditemukan. Silakan aktifkan ekstensi "zip" di php.ini Anda.');
+        }
+
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         
@@ -334,6 +426,11 @@ class AdminController extends Controller
 
         $file = $request->file('file');
         
+        // Check if ZipArchive is enabled (required for .xlsx)
+        if (!class_exists('ZipArchive') && $file->getClientOriginalExtension() === 'xlsx') {
+            return redirect()->back()->with('error', 'Error: Class "ZipArchive" tidak ditemukan. Silakan aktifkan ekstensi "zip" di php.ini Anda dan restart server.');
+        }
+        
         try {
             $spreadsheet = IOFactory::load($file->getRealPath());
             $sheet = $spreadsheet->getActiveSheet();
@@ -352,7 +449,12 @@ class AdminController extends Controller
 
                 $tanggal = $row[0];
                 $shift = $row[1] ?? 'Pagi';
-                $nip = $row[2];
+                $nip = trim((string)($row[2] ?? ''));
+                
+                // Handle scientific notation from Excel for 18-digit NIPs
+                if (is_numeric($nip) && (strpos(strtolower($nip), 'e+') !== false)) {
+                    $nip = number_format((float)$nip, 0, '', '');
+                }
                 $status = strtolower($row[3] ?? 'aktif');
 
                 // Find user by NIP BPS or NIP PNS
@@ -404,11 +506,32 @@ class AdminController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function activityLogs()
+    public function activityLogs(Request $request)
     {
-        $logs = \App\Models\ActivityLog::with('user')
-            ->latest()
-            ->paginate(50);
+        $query = \App\Models\ActivityLog::with('user');
+
+        // Search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('action', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('target_type', 'like', "%{$search}%")
+                  ->orWhereHas('user', function($uq) use ($search) {
+                      $uq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Date filter
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        $logs = $query->latest()->paginate(50)->withQueryString();
 
         return view('admin.logs', compact('logs'));
     }

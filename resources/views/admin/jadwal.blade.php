@@ -105,7 +105,27 @@
 <!-- Tabel Jadwal -->
 <div class="card">
     <div class="card-body">
-        <h5 class="card-title">Daftar Jadwal</h5>
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+            <h5 class="card-title mb-0">Daftar Jadwal</h5>
+            <form method="GET" action="{{ route('admin.jadwal') }}" class="d-flex gap-2 align-items-end flex-wrap">
+                <div>
+                    <label class="form-label small text-muted mb-1" style="font-size: 0.65rem;">DARI TANGGAL</label>
+                    <input type="date" name="start_date" class="form-control form-control-sm" value="{{ request('start_date') }}">
+                </div>
+                <div>
+                    <label class="form-label small text-muted mb-1" style="font-size: 0.65rem;">SAMPAI TANGGAL</label>
+                    <input type="date" name="end_date" class="form-control form-control-sm" value="{{ request('end_date') }}">
+                </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-sm btn-primary px-3" title="Filter Jadwal">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                    <a href="{{ route('admin.jadwal') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filter">
+                        <i class="fas fa-undo"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
         <table class="table table-striped">
             <thead>
                 <tr>

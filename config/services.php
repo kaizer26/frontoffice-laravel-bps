@@ -37,6 +37,7 @@ return [
 
     'gas' => [
         'rating_url' => env('GAS_RATING_URL'),
+        'skd_url' => env('GAS_SKD_URL'),
     ],
 
 ];

@@ -1,5 +1,92 @@
 @extends('layouts.dashboard')
 
+@push('styles')
+<style>
+        /* Modern Service Card Improvements */
+        .service-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
+        }
+        .service-card:hover {
+            box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+            border-color: var(--primary);
+        }
+
+        /* Action Menu for Mobile */
+        @media (max-width: 991.98px) {
+            .sidebar {
+                z-index: 2000; /* Ensure sidebar is above everything */
+            }
+            .service-card {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+            .mobile-action-dropdown .dropdown-menu {
+                border-radius: 12px;
+                border: 1px solid var(--border-color);
+                box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+                padding: 8px;
+                z-index: 1050;
+            }
+            .mobile-action-dropdown .dropdown-item {
+                border-radius: 8px;
+                padding: 10px 15px;
+                margin-bottom: 4px;
+                font-size: 0.9rem;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .mobile-action-dropdown .dropdown-item:last-child {
+                margin-bottom: 0;
+            }
+            .mobile-action-dropdown .dropdown-item i {
+                width: 20px;
+                text-align: center;
+            }
+
+            /* Main Layout Adjustments */
+            .main-content {
+                padding: 12px !important;
+            }
+            .stat-card {
+                padding: 15px;
+                margin-bottom: 12px;
+            }
+            .stat-value {
+                font-size: 1.3rem;
+            }
+            .stat-label {
+                font-size: 0.75rem;
+            }
+            
+            /* Typography */
+            h1, .h3 { font-size: 1.25rem !important; }
+            h5 { font-size: 1rem !important; }
+            .form-label { font-size: 0.85rem; }
+            .badge { font-size: 0.65rem !important; }
+            
+            /* Table Adjustments */
+            .table {
+                font-size: 0.8rem;
+            }
+            .table th, .table td {
+                padding: 0.5rem;
+            }
+            
+            /* Form Adjustments */
+            .card-body {
+                padding: 15px !important;
+            }
+        }
+</style>
+@endpush
+
 @section('sidebar')
 <div class="sidebar">
     <div class="sidebar-header">
@@ -37,9 +124,12 @@
 @section('title_section')
     <div>
         <h1 class="h3 mb-0">Dashboard Petugas</h1>
-        <div class="badge bg-success-subtle text-success border border-success-subtle mt-1" style="font-size: 0.65rem;">
+        <div class="badge bg-success-subtle text-success border border-success-subtle mt-1" style="font-size: 0.65rem; padding-right: 8px;">
             <i class="fas fa-circle-play fa-fade me-1"></i> LIVE UPDATES ACTIVE 
             <span id="nextRefreshCounter" class="ms-1 text-muted fw-normal">(30s)</span>
+            <button onclick="manualRefresh()" class="btn btn-link btn-sm p-0 ms-2 text-success" style="font-size: 0.7rem; border: none; background: transparent;" title="Refresh Now">
+                <i class="fas fa-rotate"></i>
+            </button>
         </div>
     </div>
     <div class="text-end d-none d-md-block ms-auto me-3">
@@ -50,27 +140,44 @@
 
 @section('content')
 
+<!-- Attendance Widget -->
+<div class="card mb-4 border-0 shadow-sm overflow-hidden" style="border-radius: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="card-body p-3 p-md-4 text-white position-relative">
+        <div class="row align-items-center position-relative" style="z-index: 2;">
+            <div class="col-md-7 mb-3 mb-md-0">
+                <h5 class="fw-bold mb-1"><i class="fas fa-fingerprint me-2"></i> Presensi Petugas</h5>
+                <p class="small mb-0 opacity-75" id="attendanceMessage">Memuat status kehadiran...</p>
+            </div>
+            <div class="col-md-5 text-md-end" id="attendanceActions">
+                <!-- Action buttons will be injected here -->
+            </div>
+        </div>
+        <!-- Decorative background icon -->
+        <i class="fas fa-clock position-absolute" style="right: -20px; bottom: -20px; font-size: 8rem; opacity: 0.1; transform: rotate(-15deg);"></i>
+    </div>
+</div>
+
 <!-- Stats Cards -->
-<div class="row mb-4">
-    <div class="col-md-3">
+<div class="row g-2 g-md-3 mb-4">
+    <div class="col-6 col-md-3">
         <div class="stat-card">
             <div class="stat-value" id="statVisitorsToday">0</div>
             <div class="stat-label">Pengunjung Hari Ini</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="stat-card">
             <div class="stat-value" id="statVisitorsWeek">0</div>
             <div class="stat-label">Minggu Ini</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="stat-card">
             <div class="stat-value" id="statVisitorsTotal">0</div>
             <div class="stat-label">Total Dilayani</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="stat-card">
             <div class="stat-value" id="statRating">0.0</div>
             <div class="stat-label">Rating Saya</div>
@@ -213,12 +320,51 @@
 <div id="tab-layanan" class="tab-content" style="display:none;">
     <div class="card">
         <div class="card-body">
-            <h5 class="card-title"><i class="fas fa-tasks"></i> Layanan yang Saya Tangani</h5>
+            <h5 class="card-title d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-tasks"></i> Layanan yang Saya Tangani</span>
+                @php $driveLink = \App\Models\SystemSetting::get('data_monitoring_drive_link', '#'); @endphp
+                <a href="{{ $driveLink }}" target="_blank" class="btn btn-sm btn-outline-primary" title="Buka Google Drive Kumpulan Data">
+                    <i class="fab fa-google-drive me-1"></i> Drive Kumpulan Data
+                </a>
+            </h5>
             <div id="layananList" class="mt-3">
                 <div class="text-center py-4">
                     <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
                     <p class="mt-2 text-muted">Memuat data...</p>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Link Monitor Modal -->
+<div class="modal fade" id="linkMonitorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-link text-primary me-2"></i> Link Spreadsheet/Monitoring</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="linkMonitorForm">
+                    <input type="hidden" id="linkMonitorBtId">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Link Spreadsheet / Drive Data</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-table"></i></span>
+                            <input type="url" class="form-control" id="modalLinkMonitor" placeholder="https://docs.google.com/spreadsheets/d/...">
+                        </div>
+                        <div class="form-text mt-2 small">
+                            <i class="fas fa-info-circle me-1"></i> Masukkan link spreadsheet atau folder drive tempat pengumpulan data untuk layanan ini.
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" onclick="saveLinkMonitor()">
+                    <i class="fas fa-save me-1"></i> Simpan Link
+                </button>
             </div>
         </div>
     </div>
@@ -230,29 +376,29 @@
             <h5 class="card-title"><i class="fas fa-chart-line"></i> Status Semua Layanan</h5>
             
             <!-- Stats Row -->
-            <div class="row mb-4">
-                <div class="col-md-3">
+            <div class="row g-2 g-md-3 mb-4">
+                <div class="col-6 col-md-3">
                     <div class="stat-card" style="background:#dbeafe;">
                         <div class="stat-value text-primary" id="statusDiterima">0</div>
-                        <div class="stat-label">Diterima</div>
+                        <div class="stat-label text-primary">Diterima</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md-3">
                     <div class="stat-card" style="background:#fef3c7;">
                         <div class="stat-value text-warning" id="statusDiproses">0</div>
-                        <div class="stat-label">Diproses</div>
+                        <div class="stat-label text-warning">Diproses</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md-3">
                     <div class="stat-card" style="background:#d1fae5;">
                         <div class="stat-value text-success" id="statusSiap">0</div>
-                        <div class="stat-label">Siap Diambil</div>
+                        <div class="stat-label text-success">Siap Diambil</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md-3">
                     <div class="stat-card" style="background:#e0e7ff;">
                         <div class="stat-value" style="color:#4f46e5;" id="statusSelesai">0</div>
-                        <div class="stat-label">Selesai</div>
+                        <div class="stat-label" style="color:#4f46e5;">Selesai</div>
                     </div>
                 </div>
             </div>
@@ -262,12 +408,12 @@
                     <thead>
                         <tr>
                             <th>Pengunjung</th>
-                            <th>Instansi</th>
-                            <th>Jenis</th>
-                            <th>No. Surat</th>
-                            <th>Petugas</th>
+                            <th class="d-none d-md-table-cell">Instansi</th>
+                            <th class="d-none d-lg-table-cell">Jenis</th>
+                            <th class="d-none d-xl-table-cell">No. Surat</th>
+                            <th class="d-none d-md-table-cell">Petugas</th>
                             <th>Status</th>
-                            <th>Update</th>
+                            <th class="d-none d-md-table-cell">Update</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
@@ -312,6 +458,20 @@
                     <textarea class="form-control" id="modalCatatan" rows="2"></textarea>
                 </div>
 
+                <!-- Pegawai Terlibat Section -->
+                <div class="card bg-info-subtle border-info-subtle mb-3">
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-info"><i class="fas fa-users"></i> Pegawai Terlibat</h6>
+                        <p class="small text-muted mb-2">Tambahkan pegawai lain yang membantu (pengumpul data, konsultan, dll). Mereka akan ikut menerima penilaian dari pengunjung.</p>
+                        <div id="handlersListContainer">
+                            <!-- Dynamic handler rows will be added here -->
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-info w-100" onclick="addHandlerRow()">
+                            <i class="fas fa-plus"></i> Tambah Pegawai
+                        </button>
+                    </div>
+                </div>
+
                 <hr>
                 <div id="reportFields" style="display:none;">
                     <h6 class="mb-3 text-primary"><i class="fas fa-file-contract"></i> Laporan Hasil Pelayanan</h6>
@@ -349,8 +509,60 @@
                             <label class="form-label">Tags Data (pisahkan dengan koma)</label>
                             <input type="text" class="form-control" id="modalTags" placeholder="ekonomi, sosial, inflasi">
                         </div>
+                        
+                        <div class="card bg-primary-subtle border-primary-subtle mb-3">
+                            <div class="card-body p-3">
+                                <h6 class="card-title text-primary"><i class="fas fa-envelope-open-text"></i> Surat Balasan Otomatis</h6>
+                                <p class="small text-muted mb-3">Gunakan fitur ini untuk membuat nomor surat balasan secara otomatis sesuai standar.</p>
+                                
+                                <div id="replyLetterDraft" style="display:none;">
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-8">
+                                            <label class="small text-muted mb-1">Nomor Surat Tergenerate</label>
+                                            <input type="text" class="form-control form-control-sm border-primary" id="modalReplyNomor" readonly>
+                                        </div>
+                                        <div class="col-4">
+                                            <label class="small text-muted mb-1">Kode Surat</label>
+                                            <input type="text" class="form-control form-control-sm" id="modalReplyKode" placeholder="02.04">
+                                        </div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="small text-muted mb-1">Tujuan / Penerima</label>
+                                        <input type="text" class="form-control form-control-sm text-capitalize" id="modalReplyTujuan" placeholder="Nama/Jabatan Penerima">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="small text-muted mb-1">Perihal</label>
+                                        <input type="text" class="form-control form-control-sm" id="modalReplyPerihal" placeholder="Penyampaian Data ...">
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-sm btn-primary flex-grow-1" onclick="generateReplyNumber()">
+                                            <i class="fas fa-sync"></i> Refresh No
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="cancelReplyDraft()">
+                                            <i class="fas fa-times"></i> Batal
+                                        </button>
+                                    </div>
+                                    <input type="hidden" id="modalReplyUrut">
+                                    <input type="hidden" id="modalReplyTanggal">
+                                </div>
+                                
+                                <div id="replyLetterPreview" style="display:none;" class="bg-white p-2 rounded border border-success-subtle mb-2">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="badge bg-success">Tersimpan</span>
+                                        <button type="button" class="btn btn-link btn-sm p-0 text-danger" onclick="removeReplyLetter()"><i class="fas fa-trash"></i></button>
+                                    </div>
+                                    <div class="small fw-bold" id="previewReplyNomor"></div>
+                                    <div class="small text-muted" id="previewReplyTujuan"></div>
+                                </div>
+
+                                <button type="button" class="btn btn-primary btn-sm w-100" id="btnShowReplyForm" onclick="showReplyForm()">
+                                    <i class="fas fa-magic"></i> Generate Nomor Surat Balasan
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
-                            <label class="form-label">Surat Balasan (PDF)</label>
+                            <label class="form-label">Upload Surat Balasan (PDF) <small class="text-muted text-xs">Jika sudah ada file mandiri</small></label>
                             <input type="file" class="form-control" id="modalSuratBalasan" accept=".pdf">
                         </div>
                     </div>
@@ -395,6 +607,78 @@
         </div>
     </div>
 </div>
+
+<!-- Generic Document Preview Modal -->
+<div class="modal fade" id="docPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-file-alt"></i> Pratinjau Dokumen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="docPreviewContent" style="height: 80vh;">
+                    <!-- Content injected via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upcoming Schedule Modal -->
+<div class="modal fade" id="upcomingScheduleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+            <div class="modal-header bg-primary text-white py-3 border-0">
+                <h5 class="modal-title fw-bold"><i class="fas fa-calendar-check me-2"></i> Jadwal Jaga Mendatang</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="bg-primary-subtle rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-clock fa-2x text-primary"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1">Halo, {{ auth()->user()->name }}!</h5>
+                    <p class="text-muted small">Anda sedang tidak dalam jadwal jaga saat ini.</p>
+                </div>
+                
+                <div class="schedule-timeline">
+                    @forelse($upcomingSchedules as $schedule)
+                        <div class="d-flex align-items-start mb-3 pb-3 border-bottom border-light last-child-no-border">
+                            <div class="bg-light rounded p-2 text-center me-3" style="min-width: 60px;">
+                                <div class="fw-bold text-primary">{{ $schedule->tanggal->format('d') }}</div>
+                                <div class="small text-muted text-uppercase" style="font-size: 0.65rem;">{{ $schedule->tanggal->translatedFormat('M') }}</div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">{{ $schedule->tanggal->translatedFormat('l, d F Y') }}</div>
+                                <div class="badge bg-{{ $schedule->shift == 1 ? 'info' : 'warning' }}-subtle text-{{ $schedule->shift == 1 ? 'info' : 'warning' }} mt-1">
+                                    <i class="fas fa-sun me-1"></i> Shift {{ $schedule->shift }}
+                                    ({{ $schedule->shift == 1 ? \App\Models\SystemSetting::get('shift1_start','08:00').'-'.\App\Models\SystemSetting::get('shift1_end','12:00') : \App\Models\SystemSetting::get('shift2_start','12:00').'-'.\App\Models\SystemSetting::get('shift2_end','16:00') }})
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-alt fa-3x text-muted opacity-25 mb-3"></i>
+                            <p class="text-muted">Belum ada jadwal jaga yang terdaftar.</p>
+                        </div>
+                    @endforelse
+                </div>
+                
+                <div class="mt-4">
+                    <button type="button" class="btn btn-primary w-100 py-2 fw-bold" data-bs-dismiss="modal" style="border-radius: 12px;">
+                        Siap Bertugas!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .last-child-no-border:last-child { border-bottom: none !important; margin-bottom: 0 !important; }
+    .bg-primary-subtle { background-color: rgba(13, 110, 253, 0.1); }
+</style>
 
 <!-- Edit Visitor Modal -->
 <div class="modal fade" id="editVisitorModal" tabindex="-1">
@@ -524,6 +808,22 @@
                             <label class="form-label">Keperluan</label>
                             <textarea class="form-control" name="keperluan" id="edit_keperluan" rows="3" required></textarea>
                         </div>
+
+                        <!-- Pegawai Terlibat Section for Edit Modal -->
+                        <div class="col-12">
+                            <div class="card bg-info-subtle border-info-subtle">
+                                <div class="card-body p-3">
+                                    <h6 class="card-title text-info mb-2"><i class="fas fa-users"></i> Pegawai Terlibat</h6>
+                                    <p class="small text-muted mb-2">Pegawai lain yang membantu layanan ini (pengumpul data, konsultan, dll).</p>
+                                    <div id="editHandlersListContainer">
+                                        <!-- Dynamic handler rows will be populated here -->
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-info w-100" onclick="addEditHandlerRow()">
+                                        <i class="fas fa-plus"></i> Tambah Pegawai
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -633,7 +933,22 @@ let currentServiceId = null;
 
 // Load stats on page load
 loadStats();
+loadAttendanceStatus();
 startRealtimeUpdates();
+
+// Show upcoming schedule modal if not on duty
+@if(!$isOnDuty)
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if modal was already shown in this session to avoid annoyance
+    if (!sessionStorage.getItem('schedule_modal_shown')) {
+        setTimeout(() => {
+            const myModal = new bootstrap.Modal(document.getElementById('upcomingScheduleModal'));
+            myModal.show();
+            sessionStorage.setItem('schedule_modal_shown', 'true');
+        }, 1000);
+    }
+});
+@endif
 
 function toggleSuratFields() {
     const permintaan = document.getElementById('permintaan');
@@ -699,6 +1014,109 @@ function togglePegawaiSelect() {
     }
 }
 
+// Handler Management for Multi-Employee Rating
+const allPetugas = @json($petugas->map(fn($p) => ['id' => $p->id, 'name' => $p->name]));
+let handlerCounter = 0;
+
+function addHandlerRow() {
+    handlerCounter++;
+    const container = document.getElementById('handlersListContainer');
+    const rowId = `handler-row-${handlerCounter}`;
+    
+    let options = '<option value="">-- Pilih Pegawai --</option>';
+    allPetugas.forEach(p => {
+        options += `<option value="${p.id}">${p.name}</option>`;
+    });
+    
+    const rowHtml = `
+        <div id="${rowId}" class="d-flex gap-2 mb-2 align-items-center">
+            <select class="form-select form-select-sm flex-grow-1 handler-select" name="handler_user_id">
+                ${options}
+            </select>
+            <select class="form-select form-select-sm" name="handler_role" style="width: 40%;">
+                <option value="Membantu">Membantu</option>
+                <option value="Pengumpul Data">Pengumpul Data</option>
+                <option value="Konsultan">Konsultan</option>
+                <option value="Verifikator">Verifikator</option>
+            </select>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeHandlerRow('${rowId}')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', rowHtml);
+}
+
+function removeHandlerRow(rowId) {
+    document.getElementById(rowId).remove();
+}
+
+function collectHandlersData() {
+    const handlers = [];
+    const rows = document.querySelectorAll('#handlersListContainer .d-flex');
+    rows.forEach(row => {
+        const userSelect = row.querySelector('select[name="handler_user_id"]');
+        const roleSelect = row.querySelector('select[name="handler_role"]');
+        if (userSelect && userSelect.value) {
+            handlers.push({
+                user_id: parseInt(userSelect.value),
+                role: roleSelect ? roleSelect.value : 'Membantu'
+            });
+        }
+    });
+    return handlers;
+}
+
+function loadUpdateHandlers(serviceId) {
+    const container = document.getElementById('handlersListContainer');
+    container.innerHTML = '<div class="text-muted small text-center py-2">Memuat...</div>';
+    
+    fetch(`/api/services/${serviceId}/handlers`)
+        .then(res => res.json())
+        .then(data => {
+            container.innerHTML = '';
+            if (data.success && data.handlers && data.handlers.length > 0) {
+                data.handlers.forEach(h => {
+                    addHandlerRowWithData(h.user_id, h.role);
+                });
+            }
+        })
+        .catch(err => {
+            container.innerHTML = '';
+            console.error('Error loading handlers:', err);
+        });
+}
+
+function addHandlerRowWithData(selectedUserId, selectedRole) {
+    handlerCounter++;
+    const container = document.getElementById('handlersListContainer');
+    const rowId = `handler-row-${handlerCounter}`;
+    
+    let options = '<option value="">-- Pilih Pegawai --</option>';
+    allPetugas.forEach(p => {
+        const selected = (p.id == selectedUserId) ? 'selected' : '';
+        options += `<option value="${p.id}" ${selected}>${p.name}</option>`;
+    });
+    
+    const roles = ['Membantu', 'Pengumpul Data', 'Konsultan', 'Verifikator'];
+    let roleOptions = roles.map(r => `<option value="${r}" ${r === selectedRole ? 'selected' : ''}>${r}</option>`).join('');
+    
+    const rowHtml = `
+        <div id="${rowId}" class="d-flex gap-2 mb-2 align-items-center">
+            <select class="form-select form-select-sm flex-grow-1 handler-select" name="handler_user_id">
+                ${options}
+            </select>
+            <select class="form-select form-select-sm" name="handler_role" style="width: 40%;">
+                ${roleOptions}
+            </select>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeHandlerRow('${rowId}')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', rowHtml);
+}
+
 function loadStats() {
     fetch('/api/stats/petugas')
         .then(res => res.json())
@@ -709,6 +1127,129 @@ function loadStats() {
             document.getElementById('statRating').textContent = data.rating?.average || '0.0';
         })
         .catch(err => console.error('Stats error:', err));
+}
+
+function loadAttendanceStatus() {
+    fetch('/api/absensi/status')
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) return;
+            
+            const { is_clocked_in, has_clocked_out, absensi, schedule, shift_settings } = data;
+            const actionContainer = document.getElementById('attendanceActions');
+            const messageEl = document.getElementById('attendanceMessage');
+            
+            let html = '';
+            let message = '';
+            
+            if (has_clocked_out) {
+                const clockOutTime = new Date(absensi.jam_pulang).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+                message = `Sudah absen pulang pada ${clockOutTime} WITA. Terima kasih!`;
+                html = `<span class="badge bg-light text-white p-2 px-3 rounded-pill" style="background: rgba(255,255,255,0.2) !important;"><i class="fas fa-check-circle me-1"></i> Selesai Bertugas</span>`;
+            } else if (is_clocked_in) {
+                const clockInTime = new Date(absensi.jam_masuk).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+                const statusColor = absensi.status_masuk === 'Terlambat' ? 'text-warning' : 'text-white';
+                message = `Sudah absen masuk pada ${clockInTime} WITA. <span class="${statusColor} fw-bold">(${absensi.status_masuk})</span>`;
+                html = `<button class="btn btn-light rounded-pill px-4 fw-bold text-danger btn-sm shadow-sm" onclick="clockOut()"><i class="fas fa-sign-out-alt me-1"></i> Selesai Bertugas</button>`;
+                
+                // If it's HTML, we need to use innerHTML for message
+                messageEl.innerHTML = message;
+            } else {
+                if (schedule) {
+                    const shiftStart = shift_settings['s'+schedule.shift+'_start'];
+                    const shiftEnd = shift_settings['s'+schedule.shift+'_end'];
+                    message = `Jadwal hari ini: Shift ${schedule.shift} (${shiftStart} - ${shiftEnd} WITA). Silakan klik tombol untuk mulai.`;
+                    html = `<button class="btn btn-light rounded-pill px-4 fw-bold text-primary btn-sm shadow-sm" onclick="clockIn()"><i class="fas fa-sign-in-alt me-1"></i> Mulai Bertugas</button>`;
+                } else {
+                    message = "Tidak ada jadwal tugas untuk Anda hari ini.";
+                    html = `<button class="btn btn-light rounded-pill px-4 fw-bold text-secondary btn-sm shadow-sm" onclick="clockIn()" title="Klik jika Anda tetap bertugas hari ini"><i class="fas fa-sign-in-alt me-1"></i> Mulai Bertugas</button>`;
+                }
+                messageEl.textContent = message;
+            }
+            
+            actionContainer.innerHTML = html;
+        });
+}
+
+function clockIn() {
+    Swal.fire({
+        title: 'Mulai Bertugas?',
+        text: "Anda akan melakukan absen masuk untuk hari ini.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#667eea',
+        confirmButtonText: 'Ya, Mulai',
+        cancelButtonText: 'Batal',
+        borderRadius: '15px'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch('/api/absensi/clock-in', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    loadAttendanceStatus();
+                    // Optional: Refresh schedules or stats
+                } else {
+                    Swal.fire({
+                        title: 'Gagal',
+                        text: data.message,
+                        icon: 'error',
+                        borderRadius: '15px'
+                    });
+                }
+            })
+            .catch(err => {
+                showToast('Terjadi kesalahan jaringan', 'error');
+            });
+        }
+    });
+}
+
+function clockOut() {
+    Swal.fire({
+        title: 'Selesai Bertugas?',
+        text: "Pastikan semua pelayanan Anda sudah diperbarui statusnya.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#764ba2',
+        confirmButtonText: 'Ya, Selesai',
+        cancelButtonText: 'Batal',
+        borderRadius: '15px'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch('/api/absensi/clock-out', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    loadAttendanceStatus();
+                } else {
+                    Swal.fire({
+                        title: 'Gagal',
+                        text: data.message,
+                        icon: 'error',
+                        borderRadius: '15px'
+                    });
+                }
+            })
+            .catch(err => {
+                showToast('Terjadi kesalahan jaringan', 'error');
+            });
+        }
+    });
 }
 
 // Tab switching
@@ -758,7 +1299,7 @@ document.getElementById('bukuTamuForm').addEventListener('submit', function(e) {
             // Show rating link modal with flexible local URL
             if (data.rating_token || data.remote_rating_url) {
                 const localRatingUrl = data.rating_token ? `${window.location.origin}/rating/${data.rating_token}` : null;
-                showRatingLinkModal(localRatingUrl, data.skd_token, data.remote_rating_url);
+                showRatingLinkModal(localRatingUrl, data.skd_token, data.remote_rating_url, data.skd_short_url, data.remote_rating_long_url, data.skd_long_url, data.whatsapp_group_link, data.visitor_name, data.visitor_purpose, data.visitor_instansi, data.visitor_service, null);
             }
         } else {
             showToast('Error: ' + (data.message || 'Terjadi kesalahan'), 'error');
@@ -771,8 +1312,11 @@ document.getElementById('bukuTamuForm').addEventListener('submit', function(e) {
     });
 });
 
-function showRatingLinkModal(ratingUrl, skdToken, remoteRatingUrl = null) {
-    const skdUrl = `https://script.google.com/macros/s/AKfycbx6NAMQSZTBFuda4tpddVggCK87wr0pCLUxpCarjLJYH7OvbTXJ80j_fPLBAXtXWO0/exec?token=${skdToken}`;
+function showRatingLinkModal(ratingUrl, skdToken, remoteRatingUrl = null, skdShortUrl = null, remoteRatingLongUrl = null, skdLongUrl = null, waGroupLink = null, visitorName = null, visitorPurpose = null, visitorInstansi = null, visitorService = null, linkMonitor = null) {
+    const defaultSkdLongUrl = `https://script.google.com/macros/s/AKfycbx6NAMQSZTBFuda4tpddVggCK87wr0pCLUxpCarjLJYH7OvbTXJ80j_fPLBAXtXWO0/exec?token=${skdToken}`;
+    const fullSkdUrl = skdShortUrl || defaultSkdLongUrl;
+    const finalSkdLongUrl = skdLongUrl || defaultSkdLongUrl;
+    const finalWaGroupLink = waGroupLink || '{{ \App\Models\SystemSetting::get("whatsapp_group_link", "https://chat.whatsapp.com/DPrCxwvtrX3DP6Gu84YOef") }}';
     
     // Create modal if not exists
     let modal = document.getElementById('ratingLinkModal');
@@ -809,13 +1353,26 @@ function showRatingLinkModal(ratingUrl, skdToken, remoteRatingUrl = null) {
                                     <h6 class="fw-bold mb-3"><i class="fas fa-home text-info"></i> 2. Rating Remote</h6>
                                     <p class="small text-muted mb-2">Bisa isi dari rumah</p>
                                     <div id="qrRemoteRatingContainer" class="mb-3 p-2 bg-white d-inline-block rounded shadow-sm border"></div>
-                                    <div class="input-group mb-2">
-                                        <input type="text" class="form-control form-control-sm bg-light" id="remoteRatingInput" readonly>
-                                        <button class="btn btn-sm btn-primary" onclick="copyToClipboard('remoteRatingInput')"><i class="fas fa-copy"></i></button>
+                                    
+                                    <div class="text-start mb-3">
+                                        <label class="small text-muted mb-1" style="font-size: 0.7rem;">Shortlink (is.gd):</label>
+                                        <div class="input-group input-group-sm mb-2">
+                                            <input type="text" class="form-control form-control-sm bg-light" id="remoteRatingInput" readonly>
+                                            <button class="btn btn-sm btn-primary" onclick="copyToClipboard('remoteRatingInput')"><i class="fas fa-copy"></i></button>
+                                        </div>
+                                        <label class="small text-muted mb-1" style="font-size: 0.7rem;">Link Asli (Panjang):</label>
+                                        <div class="input-group input-group-sm mb-2">
+                                            <input type="text" class="form-control form-control-sm bg-light" id="remoteRatingLongInput" readonly style="font-size: 0.65rem;">
+                                            <button class="btn btn-sm btn-secondary" onclick="copyToClipboard('remoteRatingLongInput')"><i class="fas fa-copy"></i></button>
+                                        </div>
                                     </div>
-                                    <div class="d-grid">
+                                    
+                                    <div class="d-grid gap-2">
                                         <a id="waRemoteRating" href="#" target="_blank" class="btn btn-sm btn-outline-success">
-                                            <i class="fab fa-whatsapp"></i> WA
+                                            <i class="fab fa-whatsapp"></i> WA Shortlink
+                                        </a>
+                                        <a id="waRemoteRatingFull" href="#" target="_blank" class="btn btn-sm btn-outline-dark">
+                                            <i class="fab fa-whatsapp"></i> WA Full Link
                                         </a>
                                     </div>
                                 </div>
@@ -825,19 +1382,47 @@ function showRatingLinkModal(ratingUrl, skdToken, remoteRatingUrl = null) {
                                     <h6 class="fw-bold mb-3"><i class="fas fa-poll-h text-primary"></i> 3. Survei SKD</h6>
                                     <p class="small text-muted mb-2">Hanya Layanan Data</p>
                                     <div id="qrSkdContainer" class="mb-3 p-2 bg-white d-inline-block rounded shadow-sm border"></div>
-                                    <div class="input-group mb-2">
-                                        <input type="text" class="form-control form-control-sm bg-light" id="skdInput" readonly>
-                                        <button class="btn btn-sm btn-primary" onclick="copyToClipboard('skdInput')"><i class="fas fa-copy"></i></button>
+                                    
+                                    <div class="text-start mb-3">
+                                        <label class="small text-muted mb-1" style="font-size: 0.7rem;">Shortlink (is.gd):</label>
+                                        <div class="input-group input-group-sm mb-2">
+                                            <input type="text" class="form-control form-control-sm bg-light" id="skdInput" readonly>
+                                            <button class="btn btn-sm btn-primary" onclick="copyToClipboard('skdInput')"><i class="fas fa-copy"></i></button>
+                                        </div>
+                                        <label class="small text-muted mb-1" style="font-size: 0.7rem;">Link Asli (Panjang):</label>
+                                        <div class="input-group input-group-sm mb-2">
+                                            <input type="text" class="form-control form-control-sm bg-light" id="skdLongInput" readonly style="font-size: 0.65rem;">
+                                            <button class="btn btn-sm btn-secondary" onclick="copyToClipboard('skdLongInput')"><i class="fas fa-copy"></i></button>
+                                        </div>
                                     </div>
-                                    <div class="d-grid">
+                                    
+                                    <div class="d-grid gap-2">
                                         <a id="waSkd" href="#" target="_blank" class="btn btn-sm btn-outline-primary">
-                                            <i class="fab fa-whatsapp"></i> WA
+                                            <i class="fab fa-whatsapp"></i> WA Shortlink
+                                        </a>
+                                        <a id="waSkdFull" href="#" target="_blank" class="btn btn-sm btn-outline-dark">
+                                            <i class="fab fa-whatsapp"></i> WA Full Link
                                         </a>
                                     </div>
                                 </div>
                             </div>
+                            <div id="waInternalNotification" class="mt-3 p-3 bg-success-subtle rounded border border-success-subtle text-start">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold text-success mb-0"><i class="fab fa-whatsapp"></i> Koordinasi Internal</h6>
+                                    <a id="waGroupJoinLink" href="#" target="_blank" class="small text-decoration-none text-success fw-bold" title="Hanya buka link bergabung grup">
+                                        <i class="fas fa-users-viewfinder"></i> Link Join Grup
+                                    </a>
+                                </div>
+                                <p class="small text-muted mb-3">Klik tombol di bawah untuk mengirim <b>template notifikasi</b> ke grup koordinasi (Anda akan diminta memilih grup di WA).</p>
+                                <div class="d-grid">
+                                    <a id="waInternalBtn" href="#" target="_blank" class="btn btn-success fw-bold">
+                                        <i class="fab fa-whatsapp"></i> Kirim Notifikasi ke Grup WA
+                                    </a>
+                                </div>
+                            </div>
+
                             <div class="alert alert-primary mt-4 mb-0 py-2 border-0 bg-primary-subtle" style="font-size: 0.8rem;" id="modalInstruction">
-                                <i class="fas fa-info-circle me-1"></i> Mohon informasikan link/QR di atas kepada pengunjung untuk evaluasi layanan.
+                                <i class="fas fa-info-circle me-1"></i> Gunakan <b>Shortlink</b> untuk WhatsApp agar lebih ringkas, atau <b>Link Asli</b> jika Shortlink bermasalah.
                             </div>
                         </div>
                         <div class="modal-footer bg-light border-top-0">
@@ -872,7 +1457,9 @@ function showRatingLinkModal(ratingUrl, skdToken, remoteRatingUrl = null) {
         qrRemote.innerHTML = '';
         new QRCode(qrRemote, { text: remoteRatingUrl, width: 120, height: 120 });
         document.getElementById('remoteRatingInput').value = remoteRatingUrl;
+        document.getElementById('remoteRatingLongInput').value = remoteRatingLongUrl || remoteRatingUrl;
         document.getElementById('waRemoteRating').href = 'https://wa.me/?text=' + encodeURIComponent('Halo, terima kasih telah berkunjung ke BPS. Anda dapat mengisi penilaian layanan kami dari rumah melalui link ini: ' + remoteRatingUrl);
+        document.getElementById('waRemoteRatingFull').href = 'https://wa.me/?text=' + encodeURIComponent('Halo, terima kasih telah berkunjung ke BPS. Anda dapat mengisi penilaian layanan kami dari rumah melalui link ini: ' + (remoteRatingLongUrl || remoteRatingUrl));
         remoteRatingCol.style.display = 'block';
     } else {
         remoteRatingCol.style.display = 'none';
@@ -880,15 +1467,42 @@ function showRatingLinkModal(ratingUrl, skdToken, remoteRatingUrl = null) {
 
     // Handle SKD Content
     if (skdToken) {
-        const fullSkdUrl = `https://script.google.com/macros/s/AKfycbx6NAMQSZTBFuda4tpddVggCK87wr0pCLUxpCarjLJYH7OvbTXJ80j_fPLBAXtXWO0/exec?token=${skdToken}`;
         const qrSkd = document.getElementById('qrSkdContainer');
         qrSkd.innerHTML = '';
         new QRCode(qrSkd, { text: fullSkdUrl, width: 120, height: 120 });
         document.getElementById('skdInput').value = fullSkdUrl;
+        document.getElementById('skdLongInput').value = finalSkdLongUrl;
         document.getElementById('waSkd').href = 'https://wa.me/?text=' + encodeURIComponent('Halo, mohon bantu kami meningkatkan kualitas data dengan mengisi Survei SKD melalui link: ' + fullSkdUrl);
+        document.getElementById('waSkdFull').href = 'https://wa.me/?text=' + encodeURIComponent('Halo, mohon bantu kami meningkatkan kualitas data dengan mengisi Survei SKD melalui link: ' + finalSkdLongUrl);
         skdCol.style.display = 'block';
     } else {
         skdCol.style.display = 'none';
+    }
+
+    // Handle Internal WA Notification
+    const waInternalBtn = document.getElementById('waInternalBtn');
+    const waGroupJoinLink = document.getElementById('waGroupJoinLink');
+    
+    if (finalWaGroupLink) {
+        document.getElementById('waInternalNotification').style.display = 'block';
+        waGroupJoinLink.href = finalWaGroupLink;
+        
+        // Always generate message even if visitorName is technically missing (fallback to "Pengunjung")
+        const name = visitorName || 'Pengunjung';
+        const instansi = visitorInstansi || '-';
+        const layanan = visitorService || '-';
+        const purpose = visitorPurpose || '-';
+        let waMessage = `🔔 *NOTIFIKASI PENGUNJUNG BARU*\n\n*Nama:* ${name}\n*Instansi:* ${instansi}\n*Layanan:* ${layanan}\n*Tujuan:* ${purpose}\n*Status:* Menunggu Pelayanan`;
+        
+        if (linkMonitor) {
+            waMessage += `\n\nUntuk pengisian data nya bisa diakses pada link berikut:\n${linkMonitor}`;
+        }
+
+        waMessage += `\n\n_Mohon petugas terkait segera menindaklanjuti._`;
+        waInternalBtn.href = `https://wa.me/?text=${encodeURIComponent(waMessage)}`;
+        waInternalBtn.innerHTML = '<i class="fab fa-whatsapp"></i> Kirim Notifikasi ke Grup WA';
+    } else {
+        document.getElementById('waInternalNotification').style.display = 'none';
     }
 
     var myModal = new bootstrap.Modal(document.getElementById('ratingLinkModal'));
@@ -941,60 +1555,95 @@ function loadMyServices() {
             
             const html = services.map(s => `
                 <div class="service-card" id="service-card-${s.id}">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="mb-1"><i class="fas fa-user"></i> ${s.nama_pengunjung}</h6>
-                            <div class="small fw-bold text-primary mb-1">
-                                <i class="fas fa-calendar-alt"></i> Kunjungan: ${s.tanggal_kunjungan || '-'}
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <h6 class="mb-0 text-truncate"><i class="fas fa-user-circle text-primary me-1"></i> ${s.nama_pengunjung}</h6>
+                                <span class="badge bg-${getStatusColor(s.status_layanan)} small">${s.status_layanan}</span>
                             </div>
-                            <p class="mb-1 text-muted" style="font-size:0.85rem;"><i class="fas fa-tag"></i> ${s.jenis_layanan}</p>
-                            <p class="mb-1 text-muted"><i class="fas fa-building"></i> ${s.instansi}</p>
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <small class="text-muted"><i class="fas fa-file-alt"></i> No. Surat: ${s.nomor_surat || '-'}</small>
+                            <div class="small fw-bold text-muted mb-1">
+                                <i class="fas fa-calendar-day me-1"></i> ${s.tanggal_kunjungan || '-'}
+                            </div>
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                <span class="badge bg-light text-muted border small"><i class="fas fa-tag"></i> ${s.jenis_layanan}</span>
                                 ${s.sarana_kunjungan === 'Online' ? `
-                                    <span class="badge bg-light text-dark border"><i class="fas fa-globe"></i> ${s.online_channel}${s.nama_petugas_online ? ' ('+s.nama_petugas_online+')' : ''}</span>
+                                    <span class="badge bg-light text-dark border small"><i class="fas fa-globe"></i> ${s.online_channel}</span>
                                 ` : ''}
-                                <!-- Only show SKD badge for Permintaan Data (which has skd_token) -->
                                 ${s.status_layanan === 'Selesai' && s.skd_token ? (
                                     s.skd_filled ? 
-                                    '<span class="badge bg-success"><i class="fas fa-check-circle"></i> SKD Diisi</span>' : 
-                                    `<span class="badge bg-warning text-dark" id="skd-badge-${s.skd_token}"><i class="fas fa-hourglass-half"></i> Menunggu SKD</span>`
+                                    '<span class="badge bg-success-subtle text-success border-success-subtle small"><i class="fas fa-check-circle"></i> SKD</span>' : 
+                                    `<span class="badge bg-warning-subtle text-warning border-warning-subtle small" id="skd-badge-${s.skd_token}"><i class="fas fa-clock"></i> SKD</span>`
                                 ) : ''}
-                                ${s.rated ? '<span class="badge bg-success"><i class="fas fa-star"></i> Rated</span>' : ''}
+                                ${s.rated ? '<span class="badge bg-info-subtle text-info border-info-subtle small"><i class="fas fa-star"></i> Rated</span>' : ''}
                             </div>
+                            <p class="mb-1 text-muted small text-truncate"><i class="fas fa-building me-1"></i> ${s.instansi}</p>
+                            <small class="text-muted d-block text-truncate"><i class="fas fa-file-invoice me-1"></i> No. Surat: ${s.nomor_surat || '-'}</small>
                         </div>
-                        <div class="text-end">
-                            <span class="badge bg-${getStatusColor(s.status_layanan)} mb-2">${s.status_layanan}</span>
-                            <br>
-                            <div class="btn-group">
-                                <button class="btn btn-sm btn-outline-dark" onclick="openEditVisitorModal(${s.id})" title="Edit Data Pengunjung">
+                        
+                        <!-- Actions -->
+                        <div class="actions-container">
+                            <!-- Desktop Actions -->
+                            <div class="d-none d-lg-flex flex-column gap-1">
+                                ${s.link_monitor ? `
+                                    <a href="${s.link_monitor}" target="_blank" class="btn btn-xs btn-success" title="Buka Link Monitoring">
+                                        <i class="fas fa-external-link-alt"></i> Buka
+                                    </a>
+                                ` : ''}
+                                <button class="btn btn-xs btn-outline-dark" onclick="openLinkMonitorModal(${s.id}, '${s.link_monitor || ''}')">
+                                    <i class="fas fa-link"></i> ${s.link_monitor ? 'Edit Link' : 'Link Monitor'}
+                                </button>
+                                <button class="btn btn-xs btn-outline-dark" onclick="openEditVisitorModal(${s.id})">
                                     <i class="fas fa-user-edit"></i> Edit Data
                                 </button>
                                 ${s.status_layanan !== 'Selesai' ? `
-                                    <button class="btn btn-sm btn-outline-primary" onclick="openUpdateModal(${s.id}, '${s.nama_pengunjung}', '${s.nomor_surat || '-'}', '${s.status_layanan}', '${s.jenis_layanan}')">
-                                        <i class="fas fa-edit"></i> Update Status
+                                    <button class="btn btn-xs btn-primary" onclick="openUpdateModal(${s.id}, '${s.nama_pengunjung}', '${s.nomor_surat || '-'}', '${s.status_layanan}', '${s.jenis_layanan}')">
+                                        <i class="fas fa-edit"></i> Update
                                     </button>
                                 ` : ''}
                                 ${s.file_surat ? `
-                                    <a href="${s.file_surat}" target="_blank" class="btn btn-sm btn-outline-info">
-                                        <i class="fas fa-file-pdf"></i> Lihat Surat
-                                    </a>
+                                    <button class="btn btn-xs btn-outline-info" onclick="previewDocument('${s.file_surat}')">
+                                        <i class="fas fa-eye"></i> Preview
+                                    </button>
                                 ` : ''}
                                 ${s.rating_token && !s.rated ? `
-                                    <button class="btn btn-sm btn-outline-warning" onclick="showRatingLinkModal('${window.location.origin}/rating/${s.rating_token}', '${s.skd_token || ''}')">
+                                    <button class="btn btn-xs btn-outline-warning" onclick="showRatingLinkModal('${window.location.origin}/rating/${s.rating_token}', '${s.skd_token || ''}', '${s.remote_rating_url || ''}', '${s.skd_short_url || ''}', '${s.remote_rating_long_url || ''}', '${s.skd_long_url || ''}', null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\'")}', '${s.link_monitor || ''}')">
                                         <i class="fas fa-star"></i> Rating
                                     </button>
                                 ` : ''}
                                 ${s.skd_token ? `
-                                    <button class="btn btn-sm btn-outline-success" onclick="showRatingLinkModal(null, '${s.skd_token}')">
+                                    <button class="btn btn-xs btn-outline-success" onclick="showRatingLinkModal(null, '${s.skd_token}', null, '${s.skd_short_url || ''}', null, '${s.skd_long_url || ''}', null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\'")}', '${s.link_monitor || ''}')">
                                         <i class="fas fa-link"></i> SKD
                                     </button>
                                 ` : ''}
-                                ${s.status_layanan === 'Selesai' && s.skd_token && !s.skd_filled ? `
-                                    <button class="btn btn-sm btn-outline-dark" onclick="checkSkdStatus('${s.skd_token}', true)">
-                                        <i class="fas fa-sync-alt"></i> Cek SKD
-                                    </button>
-                                ` : ''}
+                            </div>
+
+                            <!-- Mobile Actions (Dropdown) -->
+                            <div class="d-lg-none dropdown mobile-action-dropdown">
+                                <button class="btn btn-sm btn-outline-primary rounded-circle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 35px; height: 35px; padding: 0;">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    ${s.link_monitor ? `
+                                        <li><a class="dropdown-item text-success" href="${s.link_monitor}" target="_blank"><i class="fas fa-external-link-alt"></i> Buka Link Monitor</a></li>
+                                    ` : ''}
+                                    <li><button class="dropdown-item" onclick="openLinkMonitorModal(${s.id}, '${s.link_monitor || ''}')"><i class="fas fa-link"></i> Link Monitor</button></li>
+                                    <li><button class="dropdown-item" onclick="openEditVisitorModal(${s.id})"><i class="fas fa-user-edit"></i> Edit Data</button></li>
+                                    ${s.status_layanan !== 'Selesai' ? `
+                                        <li><button class="dropdown-item text-primary fw-bold" onclick="openUpdateModal(${s.id}, '${s.nama_pengunjung}', '${s.nomor_surat || '-'}', '${s.status_layanan}', '${s.jenis_layanan}')"><i class="fas fa-edit"></i> Update Status</button></li>
+                                    ` : ''}
+                                    ${s.file_surat ? `
+                                        <li><button class="dropdown-item" onclick="previewDocument('${s.file_surat}')"><i class="fas fa-eye"></i> Preview Surat</button></li>
+                                    ` : ''}
+                                    ${s.rating_token && !s.rated ? `
+                                        <li><button class="dropdown-item text-warning" onclick="showRatingLinkModal('${window.location.origin}/rating/${s.rating_token}', '${s.skd_token || ''}', '${s.remote_rating_url || ''}', '${s.skd_short_url || ''}', '${s.remote_rating_long_url || ''}', '${s.skd_long_url || ''}', null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\'")}', '${s.link_monitor || ''}')"><i class="fas fa-star"></i> Kirim Rating WA</button></li>
+                                    ` : ''}
+                                    ${s.skd_token ? `
+                                        <li><button class="dropdown-item text-success" onclick="showRatingLinkModal(null, '${s.skd_token}', null, '${s.skd_short_url || ''}', null, '${s.skd_long_url || ''}', null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\'")}', '${s.link_monitor || ''}')"><i class="fas fa-link"></i> Kirim Link SKD WA</button></li>
+                                    ` : ''}
+                                    ${s.status_layanan === 'Selesai' && s.skd_token && !s.skd_filled ? `
+                                        <li><button class="dropdown-item" onclick="checkSkdStatus('${s.skd_token}', true)"><i class="fas fa-sync-alt"></i> Refresh Status SKD</button></li>
+                                    ` : ''}
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -1080,6 +1729,9 @@ function openEditVisitorModal(id) {
 
     toggleEditSuratFields();
     toggleEditOnlineDetails();
+    
+    // Load existing handlers for this service
+    loadEditHandlers(s.id);
 
     new bootstrap.Modal(document.getElementById('editVisitorModal')).show();
 }
@@ -1100,11 +1752,90 @@ function toggleEditPegawaiSelect() {
     document.getElementById('editPegawaiSelectField').style.display = isPegawai ? 'block' : 'none';
 }
 
+// Edit Modal Handler Functions
+let editHandlerCounter = 0;
+
+function loadEditHandlers(serviceId) {
+    const container = document.getElementById('editHandlersListContainer');
+    container.innerHTML = '<div class="text-muted small text-center py-2">Memuat...</div>';
+    
+    fetch(`/api/services/${serviceId}/handlers`)
+        .then(res => res.json())
+        .then(data => {
+            container.innerHTML = '';
+            if (data.success && data.handlers && data.handlers.length > 0) {
+                data.handlers.forEach(h => {
+                    addEditHandlerRow(h.user_id, h.role);
+                });
+            }
+        })
+        .catch(err => {
+            container.innerHTML = '';
+            console.error('Error loading handlers:', err);
+        });
+}
+
+function addEditHandlerRow(selectedUserId = '', selectedRole = 'Membantu') {
+    editHandlerCounter++;
+    const container = document.getElementById('editHandlersListContainer');
+    const rowId = `edit-handler-row-${editHandlerCounter}`;
+    
+    let options = '<option value="">-- Pilih Pegawai --</option>';
+    allPetugas.forEach(p => {
+        const selected = (p.id == selectedUserId) ? 'selected' : '';
+        options += `<option value="${p.id}" ${selected}>${p.name}</option>`;
+    });
+    
+    const roles = ['Membantu', 'Pengumpul Data', 'Konsultan', 'Verifikator'];
+    let roleOptions = roles.map(r => `<option value="${r}" ${r === selectedRole ? 'selected' : ''}>${r}</option>`).join('');
+    
+    const rowHtml = `
+        <div id="${rowId}" class="d-flex gap-2 mb-2 align-items-center">
+            <select class="form-select form-select-sm flex-grow-1 edit-handler-select" name="edit_handler_user_id">
+                ${options}
+            </select>
+            <select class="form-select form-select-sm" name="edit_handler_role" style="width: 40%;">
+                ${roleOptions}
+            </select>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeEditHandlerRow('${rowId}')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', rowHtml);
+}
+
+function removeEditHandlerRow(rowId) {
+    document.getElementById(rowId).remove();
+}
+
+function collectEditHandlersData() {
+    const handlers = [];
+    const rows = document.querySelectorAll('#editHandlersListContainer .d-flex');
+    rows.forEach(row => {
+        const userSelect = row.querySelector('select[name="edit_handler_user_id"]');
+        const roleSelect = row.querySelector('select[name="edit_handler_role"]');
+        if (userSelect && userSelect.value) {
+            handlers.push({
+                user_id: parseInt(userSelect.value),
+                role: roleSelect ? roleSelect.value : 'Membantu'
+            });
+        }
+    });
+    return handlers;
+}
+
 function submitEditVisitor() {
     const id = document.getElementById('edit_id').value;
     const form = document.getElementById('editVisitorForm');
     const formData = new FormData(form);
     formData.append('_method', 'PUT');
+    
+    // Collect and append handlers data
+    const handlers = collectEditHandlersData();
+    if (handlers.length > 0) {
+        formData.append('handlers', JSON.stringify(handlers));
+    }
 
     Swal.fire({
         title: 'Simpan Perubahan?',
@@ -1161,6 +1892,43 @@ function submitEditVisitor() {
             });
         }
     });
+}
+
+function openLinkMonitorModal(id, currentLink) {
+    document.getElementById('linkMonitorBtId').value = id;
+    document.getElementById('modalLinkMonitor').value = currentLink;
+    new bootstrap.Modal(document.getElementById('linkMonitorModal')).show();
+}
+
+function saveLinkMonitor() {
+    const id = document.getElementById('linkMonitorBtId').value;
+    const link = document.getElementById('modalLinkMonitor').value;
+    
+    // Validation: simple URL check if not empty
+    if (link && !link.startsWith('http')) {
+        showToast('Link harus diawali dengan http:// atau https://', 'error');
+        return;
+    }
+
+    fetch(`/api/services/${id}/monitor-link`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ link_monitor: link })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Link monitoring berhasil disimpan!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('linkMonitorModal')).hide();
+            loadMyServices();
+        } else {
+            showToast('Error: ' + data.message, 'error');
+        }
+    })
+    .catch(err => showToast('Error: ' + err.message, 'error'));
 }
 
 function checkSkdStatus(token, manual = false) {
@@ -1221,8 +1989,32 @@ function openUpdateModal(id, pengunjung, noSurat, status, jenisLayanan) {
     document.getElementById('modalSuratBalasan').value = '';
     document.getElementById('modalFeedback').value = 'Puas';
     
+    // Reset handlers and load existing ones
+    document.getElementById('handlersListContainer').innerHTML = '';
+    loadUpdateHandlers(id);
+    
     toggleReportFields();
     
+    // Check if reply already exists
+    const isDataRequest = currentServiceType.includes('Permintaan Data');
+    if (isDataRequest) {
+        document.getElementById('replyLetterPreview').style.display = 'none';
+        document.getElementById('replyLetterDraft').style.display = 'none';
+        document.getElementById('btnShowReplyForm').style.display = 'block';
+
+        fetch(`/api/replies/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.reply) {
+                    document.getElementById('btnShowReplyForm').style.display = 'none';
+                    document.getElementById('replyLetterPreview').style.display = 'block';
+                    document.getElementById('previewReplyNomor').textContent = data.reply.nomor_surat;
+                    document.getElementById('previewReplyTujuan').textContent = 'Penerima: ' + data.reply.tujuan;
+                }
+            })
+            .catch(err => console.log('No reply found or error:', err));
+    }
+
     var modal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
     modal.show();
 }
@@ -1295,6 +2087,12 @@ function submitUpdateStatus(event) {
         }
     }
     
+    // Collect handlers data
+    const handlers = collectHandlersData();
+    if (handlers.length > 0) {
+        formData.append('handlers', JSON.stringify(handlers));
+    }
+    
     const btn = event.target;
     const oldHtml = btn.innerHTML;
     btn.disabled = true;
@@ -1309,21 +2107,61 @@ function submitUpdateStatus(event) {
     })
     .then(res => res.json())
     .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+        
         if (data.success) {
+            // IF there is a reply letter draft, SAVE IT AS WELL
+            if (document.getElementById('replyLetterDraft').style.display === 'block') {
+                saveReplyLetter(currentServiceId);
+            }
+
             showToast('Status berhasil diupdate!', 'success');
             bootstrap.Modal.getInstance(document.getElementById('updateStatusModal')).hide();
             loadMyServices();
             
-            // Trigger SKD modal if status changed to Selesai (Rating only for initial guest book)
+            // Trigger SKD modal if status changed to Selesai
             if (status === 'Selesai' && data.skd_token) {
-                showRatingLinkModal(null, data.skd_token);
+                showRatingLinkModal(null, data.skd_token, data.remote_rating_url || null, null, null, null, data.whatsapp_group_link, data.visitor_name, data.visitor_purpose, data.visitor_instansi, data.visitor_service, data.link_monitor || null);
             }
         } else {
             showToast('Error: ' + (data.message || 'Gagal update'), 'error');
         }
     })
     .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
         showToast('Error: ' + err.message, 'error');
+    });
+}
+
+function saveReplyLetter(serviceId) {
+    const data = {
+        permintaan_data_id: serviceId,
+        nomor_surat: document.getElementById('modalReplyNomor').value,
+        nomor_urut: document.getElementById('modalReplyUrut').value,
+        tujuan: document.getElementById('modalReplyTujuan').value,
+        perihal: document.getElementById('modalReplyPerihal').value,
+        tanggal_surat: document.getElementById('modalReplyTanggal').value,
+        kode_surat: document.getElementById('modalReplyKode').value,
+        catatan: document.getElementById('modalCatatan').value
+    };
+
+    fetch('/api/replies', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(result => {
+        if (result.success) {
+            console.log('Reply letter saved successfully');
+        } else {
+            console.error('Failed to save reply letter:', result.message);
+        }
     });
 }
 
@@ -1354,33 +2192,38 @@ function loadStatus() {
                 <tr>
                     <td>
                         <strong>${s.nama_pengunjung || '-'}</strong>
-                        <div class="small text-primary fw-bold mt-1">
+                        <div class="small text-primary fw-bold mt-1 d-md-none">
                             <i class="fas fa-calendar-alt"></i> ${s.tanggal_kunjungan || '-'}
                         </div>
-                        ${s.sarana_kunjungan === 'Online' ? `
-                            <small class="text-muted d-block mt-1"><i class="fas fa-globe"></i> ${s.online_channel}${s.nama_petugas_online ? ' ('+s.nama_petugas_online+')' : ''}</small>
-                        ` : ''}
+                        <div class="small text-muted d-md-none">
+                            <span class="badge bg-light text-dark border mt-1">${s.nama_petugas || 'No Petugas'}</span>
+                        </div>
                     </td>
-                    <td>${s.instansi || '-'}</td>
-                    <td><small>${s.jenis_layanan || '-'}</small></td>
-                    <td>${s.nomor_surat || '-'}</td>
-                    <td>${s.nama_petugas || '-'}</td>
+                    <td class="d-none d-md-table-cell">${s.instansi || '-'}</td>
+                    <td class="d-none d-lg-table-cell"><small>${s.jenis_layanan || '-'}</small></td>
+                    <td class="d-none d-xl-table-cell">${s.nomor_surat || '-'}</td>
+                    <td class="d-none d-md-table-cell">${s.nama_petugas || '-'}</td>
                     <td><span class="badge bg-${getStatusColor(s.status_layanan)}">${s.status_layanan}</span></td>
-                    <td>
+                    <td class="d-none d-md-table-cell">
                         <div class="d-flex flex-column gap-1">
                             <span class="badge bg-light text-dark border">${s.tanggal_update || '-'}</span>
                             ${s.rated ? '<span class="badge bg-success-subtle text-success border-success-subtle"><i class="fas fa-star"></i> Rated</span>' : ''}
+                            ${s.skd_token ? (
+                                s.skd_filled ? 
+                                '<span class="badge bg-success-subtle text-success border-success-subtle"><i class="fas fa-check-circle"></i> SKD Diisi</span>' : 
+                                '<span class="badge bg-warning-subtle text-warning border-warning-subtle"><i class="fas fa-hourglass-half"></i> Menunggu SKD</span>'
+                            ) : ''}
                         </div>
                     </td>
                     <td>
                         <div class="btn-group">
                             ${s.rating_token && !s.rated ? `
-                                <button class="btn btn-xs btn-outline-warning" onclick="showRatingLinkModal('${window.location.origin}/rating/${s.rating_token}', '${s.skd_token || ''}')" title="Lihat Link Rating">
+                                <button class="btn btn-xs btn-outline-warning" onclick="showRatingLinkModal('${window.location.origin}/rating/${s.rating_token}', '${s.skd_token || ''}', '${s.remote_rating_url || ''}', null, null, null, null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\")}', '${s.link_monitor || ''}')" title="Lihat Link Rating">
                                     <i class="fas fa-star"></i>
                                 </button>
                             ` : ''}
                             ${s.skd_token ? `
-                                <button class="btn btn-xs btn-outline-success" onclick="showRatingLinkModal(null, '${s.skd_token}')" title="Lihat Link SKD">
+                                <button class="btn btn-xs btn-outline-success" onclick="showRatingLinkModal(null, '${s.skd_token}', null, null, null, null, null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\")}', '${s.link_monitor || ''}')" title="Lihat Link SKD">
                                     <i class="fas fa-link"></i>
                                 </button>
                             ` : ''}
@@ -1388,6 +2231,11 @@ function loadStatus() {
                                 <button class="btn btn-xs btn-outline-primary" onclick="viewReport('${encodeURIComponent(JSON.stringify(s.laporan))}')" title="Lihat Laporan">
                                     <i class="fas fa-file-invoice"></i>
                                 </button>
+                            ` : ''}
+                            ${s.link_monitor ? `
+                                <a href="${s.link_monitor}" target="_blank" class="btn btn-xs btn-outline-info" title="Buka Link Monitoring">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
                             ` : ''}
                         </div>
                     </td>
@@ -1427,9 +2275,12 @@ function viewReport(jsonStr) {
         filesHtml = `
             <div class="mb-3">
                 <label class="fw-bold">Dokumen Pendukung:</label>
-                <div class="mt-2">
-                    <a href="${laporan.surat_balasan}" target="_blank" class="btn btn-sm btn-outline-info me-2 mb-2">
-                        <i class="fas fa-file-pdf"></i> Lihat Surat Balasan
+                <div class="mt-2 text-wrap">
+                    <button class="btn btn-sm btn-outline-info me-2 mb-2" onclick="previewDocument('${laporan.surat_balasan}')">
+                        <i class="fas fa-eye"></i> Preview Surat Balasan
+                    </button>
+                    <a href="${laporan.surat_balasan}" download class="btn btn-sm btn-outline-dark me-2 mb-2">
+                        <i class="fas fa-download"></i> Unduh
                     </a>
                 </div>
             </div>`;
@@ -1467,6 +2318,23 @@ function viewReport(jsonStr) {
 function previewImage(url) {
     document.getElementById('previewImageSource').src = url;
     new bootstrap.Modal(document.getElementById('imagePreviewModal')).show();
+}
+
+function previewDocument(url) {
+    const container = document.getElementById('docPreviewContent');
+    const isPDF = url.toLowerCase().endsWith('.pdf');
+    
+    container.innerHTML = '<div class="text-center p-5"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+    
+    if (isPDF) {
+        container.innerHTML = `<iframe src="${url}" width="100%" height="100%" frameborder="0"></iframe>`;
+    } else {
+        container.innerHTML = `<div class="text-center p-3 h-100 d-flex align-items-center justify-content-center">
+            <img src="${url}" class="img-fluid rounded shadow" style="max-height: 100%;">
+        </div>`;
+    }
+    
+    new bootstrap.Modal(document.getElementById('docPreviewModal')).show();
 }
 
 function downloadImage(url) {
@@ -1509,9 +2377,9 @@ function handlePhoneInput(input) {
             .then(data => {
                 if (data.length > 0) {
                     suggestionsCont.innerHTML = data.map(v => `
-                        <button type="button" class="list-group-item list-group-item-action py-2" onclick="selectVisitor('${v.nama_konsumen}', '${v.no_hp}', '${v.email}', '${v.instansi}')">
+                        <button type="button" class="list-group-item list-group-item-action py-2" onclick="selectVisitor('${v.nama_pengunjung}', '${v.no_hp}', '${v.email}', '${v.instansi}')">
                             <div class="d-flex justify-content-between">
-                                <strong>${v.nama_konsumen}</strong>
+                                <strong>${v.nama_pengunjung}</strong>
                                 <small class="text-primary">${v.no_hp}</small>
                             </div>
                             <div class="small text-muted">${v.instansi}</div>
@@ -1568,6 +2436,62 @@ function refreshDashboardData() {
         if (activeTab.id === 'tab-layanan') loadMyServices();
         if (activeTab.id === 'tab-status') loadStatus();
     }
+}
+
+function manualRefresh() {
+    refreshDashboardData();
+    nextRefresh = 30;
+    document.getElementById('nextRefreshCounter').textContent = `(${nextRefresh}s)`;
+    showToast('Data diperbarui (Manual)', 'info');
+}
+
+// Reply Letter Functions
+function showReplyForm() {
+    document.getElementById('btnShowReplyForm').style.display = 'none';
+    document.getElementById('replyLetterDraft').style.display = 'block';
+    
+    // Autocomplete Purpose/Recipient if possible
+    const currentName = document.getElementById('modalPengunjung').textContent;
+    document.getElementById('modalReplyTujuan').value = currentName;
+    document.getElementById('modalReplyPerihal').value = 'Penyampaian Data ' + (currentServiceType.replace('Permintaan Data', '').replace(/^[,\s]+|[,\s]+$/g, '') || '');
+    
+    generateReplyNumber();
+}
+
+function cancelReplyDraft() {
+    document.getElementById('replyLetterDraft').style.display = 'none';
+    document.getElementById('btnShowReplyForm').style.display = 'block';
+}
+
+function generateReplyNumber() {
+    const kode = document.getElementById('modalReplyKode').value;
+    
+    fetch(`/api/replies/generate?kode_surat=${kode}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('modalReplyNomor').value = data.nomor_surat;
+                document.getElementById('modalReplyUrut').value = data.nomor_urut;
+                document.getElementById('modalReplyTanggal').value = new Date().toISOString().split('T')[0];
+                document.getElementById('modalReplyKode').value = data.kode_surat;
+            }
+        });
+}
+
+function removeReplyLetter() {
+    Swal.fire({
+        title: 'Hapus Draft Surat?',
+        text: "Nomor surat yang sudah tergenerate akan dibatalkan.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus'
+    }).then(result => {
+        if (result.isConfirmed) {
+            document.getElementById('replyLetterPreview').style.display = 'none';
+            document.getElementById('btnShowReplyForm').style.display = 'block';
+            // Also need to clear hidden inputs or state if any
+        }
+    });
 }
 </script>
 @endpush

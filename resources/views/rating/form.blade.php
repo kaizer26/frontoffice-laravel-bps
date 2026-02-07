@@ -208,6 +208,12 @@
                 @endif
                 <h4>{{ $officer->name }}</h4>
                 <p>Petugas Pelayanan</p>
+                @if(isset($allOfficers) && $allOfficers->count() > 1)
+                    <div style="background: rgba(255,255,255,0.15); border-radius: 10px; padding: 10px; margin-top: 10px;">
+                        <small style="opacity: 0.9;"><i class="fas fa-users"></i> Tim yang melayani Anda:</small>
+                        <p style="margin: 5px 0 0; font-size: 0.85rem;">{{ $allOfficers->pluck('name')->join(', ') }}</p>
+                    </div>
+                @endif
             </div>
             
             <form id="ratingForm">

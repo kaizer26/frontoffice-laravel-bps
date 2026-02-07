@@ -93,7 +93,7 @@ class RatingController extends Controller
             'success' => true,
             'buku_tamu' => [
                 'id' => $bukuTamu->id,
-                'nama_pengunjung' => $bukuTamu->nama_konsumen
+                'nama_pengunjung' => $bukuTamu->nama_pengunjung
             ],
             'petugas_list' => $petugasList
         ]);
@@ -149,7 +149,7 @@ class RatingController extends Controller
     public function show($token)
     {
         $bukuTamu = BukuTamu::where('rating_token', $token)
-            ->with(['user', 'petugasOnline'])
+            ->with(['user', 'petugasOnline', 'handlers.user'])
             ->first();
         
         if (!$bukuTamu) {
@@ -160,12 +160,20 @@ class RatingController extends Controller
             return view('rating.already_rated', compact('bukuTamu'));
         }
 
-        // Determine which officer is being rated
+        // Determine main officer
         $officer = ($bukuTamu->sarana_kunjungan === 'Online' && $bukuTamu->online_channel === 'Pegawai' && $bukuTamu->petugasOnline) 
             ? $bukuTamu->petugasOnline 
             : $bukuTamu->user;
         
-        return view('rating.form', compact('bukuTamu', 'officer'));
+        // Collect all officers for display (main + handlers)
+        $allOfficers = collect([$officer]);
+        foreach ($bukuTamu->handlers as $handler) {
+            if ($handler->user && $handler->user_id !== $officer->id) {
+                $allOfficers->push($handler->user);
+            }
+        }
+        
+        return view('rating.form', compact('bukuTamu', 'officer', 'allOfficers'));
     }
     
     /**
@@ -173,7 +181,7 @@ class RatingController extends Controller
      */
     public function store(Request $request, $token)
     {
-        $bukuTamu = BukuTamu::where('rating_token', $token)->first();
+        $bukuTamu = BukuTamu::where('rating_token', $token)->with('handlers')->first();
         
         if (!$bukuTamu) {
             return response()->json(['error' => 'Token tidak valid'], 404);
@@ -191,21 +199,31 @@ class RatingController extends Controller
             'komentar' => 'nullable|string|max:500',
         ]);
         
-        // Determine which officer is being rated
-        $officerId = ($bukuTamu->sarana_kunjungan === 'Online' && $bukuTamu->online_channel === 'Pegawai' && $bukuTamu->petugas_online_id) 
+        // Determine main officer
+        $mainOfficerId = ($bukuTamu->sarana_kunjungan === 'Online' && $bukuTamu->online_channel === 'Pegawai' && $bukuTamu->petugas_online_id) 
             ? $bukuTamu->petugas_online_id 
             : $bukuTamu->user_id;
 
-        // Create rating
-        PenilaianPetugas::create([
-            'buku_tamu_id' => $bukuTamu->id,
-            'user_id' => $officerId,
-            'rating_keramahan' => $validated['rating_keramahan'],
-            'rating_kecepatan' => $validated['rating_kecepatan'],
-            'rating_pengetahuan' => $validated['rating_pengetahuan'],
-            'rating_keseluruhan' => $validated['rating_keseluruhan'],
-            'komentar' => $validated['komentar'] ?? null,
-        ]);
+        // Collect all officer IDs (main + handlers)
+        $allOfficerIds = [$mainOfficerId];
+        foreach ($bukuTamu->handlers as $handler) {
+            if (!in_array($handler->user_id, $allOfficerIds)) {
+                $allOfficerIds[] = $handler->user_id;
+            }
+        }
+
+        // Create rating for each officer
+        foreach ($allOfficerIds as $officerId) {
+            PenilaianPetugas::create([
+                'buku_tamu_id' => $bukuTamu->id,
+                'user_id' => $officerId,
+                'rating_keramahan' => $validated['rating_keramahan'],
+                'rating_kecepatan' => $validated['rating_kecepatan'],
+                'rating_pengetahuan' => $validated['rating_pengetahuan'],
+                'rating_keseluruhan' => $validated['rating_keseluruhan'],
+                'komentar' => $validated['komentar'] ?? null,
+            ]);
+        }
         
         // Mark as rated
         $bukuTamu->update(['rated' => true]);

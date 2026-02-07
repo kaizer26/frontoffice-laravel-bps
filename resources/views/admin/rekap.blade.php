@@ -35,10 +35,15 @@
                     <option value="4" {{ $quarter == 4 ? 'selected' : '' }}>Triwulan IV (Okt - Des)</option>
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-2">
                 <button type="submit" class="btn btn-primary w-100 shadow-sm" style="border-radius: 10px; padding: 10px;">
-                    <i class="fas fa-filter"></i> Terapkan Filter
+                    <i class="fas fa-filter"></i> Filter
                 </button>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ route('admin.rekap.export', request()->all()) }}" class="btn btn-success w-100 shadow-sm" style="border-radius: 10px; padding: 10px;">
+                    <i class="fas fa-file-csv"></i> Export CSV
+                </a>
             </div>
         </form>
     </div>
@@ -51,12 +56,12 @@
                 <thead class="table-light">
                     <tr>
                         <th class="ps-3">Nama Petugas</th>
-                        <th>Layanan PST</th>
-                        <th>Layanan Online</th>
-                        <th>Total (PST+Online)</th>
-                        <th>Total Selesai</th>
-                        <th>Rata-rata Rating</th>
-                        <th class="text-end pe-3">Persentase Selesai</th>
+                        <th class="d-none d-lg-table-cell">Layanan PST</th>
+                        <th class="d-none d-lg-table-cell">Layanan Online</th>
+                        <th>Total</th>
+                        <th>Selesai</th>
+                        <th class="d-none d-md-table-cell">Rata-rata Rating</th>
+                        <th class="text-end pe-3">Persentase</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -68,32 +73,32 @@
                         <tr>
                             <td class="ps-3">
                                 <div class="fw-bold">{{ $item['user']->name }}</div>
-                                <small class="text-muted">{{ $item['user']->email }}</small>
+                                <small class="text-muted d-none d-md-block">{{ $item['user']->email }}</small>
                             </td>
-                            <td><span class="badge bg-info text-dark rounded-pill">{{ $item['total_pst'] }}</span></td>
-                            <td><span class="badge bg-warning text-dark rounded-pill">{{ $item['total_online'] }}</span></td>
+                            <td class="d-none d-lg-table-cell"><span class="badge bg-info text-dark rounded-pill">{{ $item['total_pst'] }}</span></td>
+                            <td class="d-none d-lg-table-cell"><span class="badge bg-warning text-dark rounded-pill">{{ $item['total_online'] }}</span></td>
                             <td><span class="badge bg-primary rounded-pill">{{ $item['total'] }}</span></td>
                             <td><span class="badge bg-success rounded-pill">{{ $item['selesai'] }}</span></td>
-                            <td>
+                            <td class="d-none d-md-table-cell">
                                 @if($item['rating'] > 0)
                                     <div class="d-flex align-items-center gap-2">
-                                        <div class="text-warning">
+                                        <div class="text-warning small">
                                             @for($i=1; $i<=5; $i++)
                                                 <i class="fas fa-star {{ $i <= $item['rating'] ? '' : 'text-muted opacity-25' }}"></i>
                                             @endfor
                                         </div>
-                                        <span class="fw-bold text-{{ $ratingColor }}">{{ $item['rating'] }}</span>
+                                        <span class="fw-bold text-{{ $ratingColor }} small">{{ $item['rating'] }}</span>
                                     </div>
                                 @else
-                                    <span class="text-muted small">Belum ada rating</span>
+                                    <span class="text-muted small">N/A</span>
                                 @endif
                             </td>
                             <td class="text-end pe-3">
                                 <div class="d-flex align-items-center justify-content-end gap-3">
-                                    <div class="progress flex-grow-1" style="height: 8px; max-width: 100px; background: #eef2f7;">
+                                    <div class="progress flex-grow-1 d-none d-lg-flex" style="height: 8px; max-width: 100px; background: #eef2f7;">
                                         <div class="progress-bar bg-success" role="progressbar" style="width: {{ $percentage }}%" aria-valuenow="{{ $percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
                                     </div>
-                                    <span class="fw-bold">{{ $percentage }}%</span>
+                                    <span class="fw-bold text-success">{{ $percentage }}%</span>
                                 </div>
                             </td>
                         </tr>

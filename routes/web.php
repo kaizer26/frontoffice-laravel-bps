@@ -11,6 +11,11 @@ use App\Http\Controllers\RatingController;
 use App\Http\Controllers\SKDController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\RatingSyncController;
+use App\Http\Controllers\DataRegistryController;
+use App\Http\Controllers\DataEntryController;
+use App\Http\Controllers\DataSummaryController;
+use App\Http\Controllers\DataRequestReplyController;
+use App\Http\Controllers\AbsensiController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes - tampilkan petugas bertugas
@@ -48,6 +53,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/jadwal/{jadwal}', [AdminController::class, 'destroyJadwal'])->name('jadwal.destroy');
         Route::get('/penilaian', [AdminController::class, 'penilaian'])->name('penilaian');
         Route::get('/rekap', [AdminController::class, 'rekapLayanan'])->name('rekap');
+        Route::get('/rekap/export', [AdminController::class, 'exportRekap'])->name('rekap.export');
         Route::get('/pegawai', [AdminController::class, 'pegawai'])->name('pegawai');
         Route::get('/users', [AdminController::class, 'users'])->name('users');
         Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
@@ -57,6 +63,28 @@ Route::middleware('auth')->group(function () {
         Route::get('/logs', [AdminController::class, 'activityLogs'])->name('logs');
         Route::get('/backup', [BackupController::class, 'download'])->name('backup');
         Route::get('/ratings/sync', [RatingSyncController::class, 'sync'])->name('ratings.sync');
+        
+        // Data Registry routes
+        Route::resource('data-registry', DataRegistryController::class);
+        Route::get('/data-registry/{registry}/viewer', [DataRegistryController::class, 'viewer'])->name('data-registry.viewer');
+        Route::prefix('data-registry/{registry}')->name('data-entry.')->group(function() {
+            Route::get('/entries', [DataEntryController::class, 'index'])->name('index');
+            Route::get('/entries/create', [DataEntryController::class, 'create'])->name('create');
+            Route::post('/entries', [DataEntryController::class, 'store'])->name('store');
+            Route::get('/entries/{entry}', [DataEntryController::class, 'show'])->name('show');
+            Route::get('/entries/{entry}/edit', [DataEntryController::class, 'edit'])->name('edit');
+            Route::put('/entries/{entry}', [DataEntryController::class, 'update'])->name('update');
+            Route::delete('/entries/{entry}', [DataEntryController::class, 'destroy'])->name('destroy');
+            Route::get('/entries/{entry}/export', [DataEntryController::class, 'export'])->name('export');
+        });
+
+        // Data Summary / Recap routes
+        Route::prefix('data-summary')->name('data-summary.')->group(function() {
+            Route::get('/', [DataSummaryController::class, 'index'])->name('index');
+            Route::post('/periods', [DataSummaryController::class, 'fetchPeriods'])->name('periods');
+            Route::post('/generate', [DataSummaryController::class, 'generate'])->name('generate');
+            Route::post('/export', [DataSummaryController::class, 'export'])->name('export');
+        });
     });
     
     // Petugas routes
@@ -67,18 +95,34 @@ Route::middleware('auth')->group(function () {
     // Shared routes (both admin and petugas)
     Route::post('/buku-tamu', [BukuTamuController::class, 'store'])->name('buku-tamu.store');
     
-    // API routes
+    // API routes (Internal Dashboard)
     Route::prefix('api')->name('api.')->group(function () {
-        Route::get('/my-services', [ServiceController::class, 'myServices'])->name('my-services');
-        Route::get('/services', [ServiceController::class, 'allServices'])->name('services');
-        Route::put('/services/{service}', [ServiceController::class, 'update'])->name('services.update');
-        Route::put('/services/{service}/visitor', [ServiceController::class, 'updateVisitor'])->name('services.visitor.update');
         Route::get('/stats/petugas', [StatsController::class, 'petugas'])->name('stats.petugas');
         Route::get('/stats/admin', [StatsController::class, 'admin'])->name('stats.admin');
-        Route::post('/skd/mark-as-filled', [SKDController::class, 'markAsFilled'])->name('skd.mark-as-filled');
-        Route::post('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
-        Route::post('/profile/reset-photo', [ProfileController::class, 'resetToDefault'])->name('profile.reset-photo');
+        Route::get('/my-services', [ServiceController::class, 'myServices'])->name('my-services');
+        Route::get('/services', [ServiceController::class, 'allServices'])->name('services');
+        Route::put('/services/{id}', [ServiceController::class, 'update'])->name('services.update');
+        Route::put('/services/{id}/visitor', [ServiceController::class, 'updateVisitor'])->name('services.visitor.update');
+        Route::put('/services/{id}/monitor-link', [ServiceController::class, 'updateMonitorLink'])->name('services.monitor-link.update');
+        Route::get('/services/{id}/handlers', [ServiceController::class, 'getHandlers'])->name('services.handlers');
+        Route::post('/skd/mark-as-filled', [ServiceController::class, 'markSkdAsFilled'])->name('skd.mark-as-filled');
         Route::get('/pengunjung/search', [BukuTamuController::class, 'searchPengunjung'])->name('pengunjung.search');
+        Route::put('/admin/setting', [AdminController::class, 'updateSetting'])->name('settings.update');
+
+        // Reply Letter API
+        Route::get('/replies/generate', [DataRequestReplyController::class, 'generateNumber'])->name('replies.generate');
+        Route::post('/replies', [DataRequestReplyController::class, 'store'])->name('replies.store');
+        Route::get('/replies/{requestId}', [DataRequestReplyController::class, 'show'])->name('replies.show');
+
+        // Profile API
+        Route::post('/profile/update', [ProfileController::class, 'update'])->name('profile.update-api');
+        Route::post('/profile/reset-photo', [ProfileController::class, 'resetToDefault'])->name('profile.reset-photo');
+
+        // Absensi API
+        Route::get('/absensi/status', [AbsensiController::class, 'status'])->name('absensi.status');
+        Route::post('/absensi/clock-in', [AbsensiController::class, 'clockIn'])->name('absensi.clock-in');
+        Route::post('/absensi/clock-out', [AbsensiController::class, 'clockOut'])->name('absensi.clock-out');
+        Route::get('/absensi/today', [AbsensiController::class, 'todaySummary'])->name('absensi.today-summary');
     });
 });
 

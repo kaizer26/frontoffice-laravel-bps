@@ -21,6 +21,10 @@
             <i class="fas fa-home"></i>
             <span>Dashboard</span>
         </a>
+        <a href="{{ \App\Models\SystemSetting::get('whatsapp_group_link', 'https://chat.whatsapp.com/DPrCxwvtrX3DP6Gu84YOef') }}" target="_blank" class="nav-item">
+            <i class="fab fa-whatsapp"></i>
+            <span>Grup Koordinasi WA</span>
+        </a>
     </nav>
     
     <div style="position: absolute; bottom: 20px; width: 100%; padding: 0 20px;">

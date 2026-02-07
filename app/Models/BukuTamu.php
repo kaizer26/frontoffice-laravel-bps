@@ -13,7 +13,7 @@ class BukuTamu extends Model
 
     protected $fillable = [
         'waktu_kunjungan',
-        'nama_konsumen',
+        'nama_pengunjung',
         'instansi',
         'no_hp',
         'email',
@@ -25,10 +25,13 @@ class BukuTamu extends Model
         'status_layanan',
         'tanggal_update',
         'catatan',
+        'link_monitor',
         'user_id',
         'rating_token',
+        'rating_short_url',
         'rated',
         'skd_token',
+        'skd_short_url',
         'skd_filled',
     ];
 
@@ -63,5 +66,10 @@ class BukuTamu extends Model
     public function laporanLayanan()
     {
         return $this->hasOne(LaporanLayanan::class);
+    }
+
+    public function handlers()
+    {
+        return $this->hasMany(BukuTamuHandler::class);
     }
 }

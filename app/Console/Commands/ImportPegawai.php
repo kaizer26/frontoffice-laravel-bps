@@ -17,6 +17,12 @@ class ImportPegawai extends Command
 
     public function handle()
     {
+        if (!class_exists('ZipArchive')) {
+            $this->error('Error: Class "ZipArchive" tidak ditemukan.');
+            $this->info('Silakan aktifkan ekstensi "zip" di php.ini Anda.');
+            return 1;
+        }
+
         $file = $this->argument('file') ?? base_path('../data pegawai.xlsx');
         
         if (!file_exists($file)) {
@@ -43,8 +49,15 @@ class ImportPegawai extends Command
             $skipped = 0;
             
             foreach ($rows as $row) {
-                $nipBps = trim($row[0] ?? '');
-                $nipPns = trim($row[1] ?? '');
+                $nipBps = trim((string)($row[0] ?? ''));
+                if (is_numeric($nipBps) && (strpos(strtolower($nipBps), 'e+') !== false)) {
+                    $nipBps = number_format((float)$nipBps, 0, '', '');
+                }
+
+                $nipPns = trim((string)($row[1] ?? ''));
+                if (is_numeric($nipPns) && (strpos(strtolower($nipPns), 'e+') !== false)) {
+                    $nipPns = number_format((float)$nipPns, 0, '', '');
+                }
                 $nama = trim($row[2] ?? '');
                 $jabatan = trim($row[3] ?? '');
                 $golongan = trim($row[4] ?? '');

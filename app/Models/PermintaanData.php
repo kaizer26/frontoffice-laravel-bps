@@ -40,4 +40,9 @@ class PermintaanData extends Model
     {
         return $this->bukuTamu->user ?? null;
     }
+
+    public function reply()
+    {
+        return $this->hasOne(DataRequestReply::class, 'permintaan_data_id');
+    }
 }

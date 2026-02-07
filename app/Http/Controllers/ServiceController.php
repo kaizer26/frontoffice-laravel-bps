@@ -24,7 +24,7 @@ class ServiceController extends Controller
                 return [
                     'id' => $bt->id,
                     'is_buku_tamu' => true,
-                    'nama_pengunjung' => $bt->nama_konsumen,
+                    'nama_pengunjung' => $bt->nama_pengunjung,
                     'instansi' => $bt->instansi,
                     'no_hp' => $bt->no_hp,
                     'email' => $bt->email,
@@ -44,6 +44,11 @@ class ServiceController extends Controller
                     'rating_token' => $bt->rating_token,
                     'skd_filled' => (bool)$bt->skd_filled,
                     'rated' => (bool)$bt->rated,
+                    'remote_rating_url' => $bt->rating_short_url ?: (config('services.gas.rating_url') ? config('services.gas.rating_url') . (str_contains(config('services.gas.rating_url'), '?') ? '&' : '?') . "token=" . $bt->rating_token : null),
+                    'remote_rating_long_url' => config('services.gas.rating_url') ? config('services.gas.rating_url') . (str_contains(config('services.gas.rating_url'), '?') ? '&' : '?') . "token=" . $bt->rating_token : null,
+                    'skd_short_url' => $bt->skd_short_url,
+                    'skd_long_url' => $bt->skd_token ? (config('services.gas.skd_url') ?: "https://script.google.com/macros/s/AKfycbx6NAMQSZTBFuda4tpddVggCK87wr0pCLUxpCarjLJYH7OvbTXJ80j_fPLBAXtXWO0/exec") . (str_contains(config('services.gas.skd_url') ?: "exec", '?') ? '&' : '?') . "token=" . $bt->skd_token : null,
+                    'link_monitor' => $bt->link_monitor,
                     'laporan' => $bt->laporanLayanan ? [
                         'topik' => $bt->laporanLayanan->topik,
                         'ringkasan' => $bt->laporanLayanan->ringkasan,
@@ -81,7 +86,7 @@ class ServiceController extends Controller
                 return [
                     'id' => $bt->id,
                     'is_buku_tamu' => true,
-                    'nama_pengunjung' => $bt->nama_konsumen,
+                    'nama_pengunjung' => $bt->nama_pengunjung,
                     'instansi' => $bt->instansi,
                     'no_hp' => $bt->no_hp,
                     'email' => $bt->email,
@@ -102,6 +107,11 @@ class ServiceController extends Controller
                     'rating_token' => $bt->rating_token,
                     'skd_filled' => (bool)$bt->skd_filled,
                     'rated' => (bool)$bt->rated,
+                    'remote_rating_url' => $bt->rating_short_url ?: (config('services.gas.rating_url') ? config('services.gas.rating_url') . (str_contains(config('services.gas.rating_url'), '?') ? '&' : '?') . "token=" . $bt->rating_token : null),
+                    'remote_rating_long_url' => config('services.gas.rating_url') ? config('services.gas.rating_url') . (str_contains(config('services.gas.rating_url'), '?') ? '&' : '?') . "token=" . $bt->rating_token : null,
+                    'skd_short_url' => $bt->skd_short_url,
+                    'skd_long_url' => $bt->skd_token ? (config('services.gas.skd_url') ?: "https://script.google.com/macros/s/AKfycbx6NAMQSZTBFuda4tpddVggCK87wr0pCLUxpCarjLJYH7OvbTXJ80j_fPLBAXtXWO0/exec") . (str_contains(config('services.gas.skd_url') ?: "exec", '?') ? '&' : '?') . "token=" . $bt->skd_token : null,
+                    'link_monitor' => $bt->link_monitor,
                     'laporan' => $bt->laporanLayanan ? [
                         'topik' => $bt->laporanLayanan->topik,
                         'ringkasan' => $bt->laporanLayanan->ringkasan,
@@ -115,6 +125,22 @@ class ServiceController extends Controller
             });
 
         return response()->json($services);
+    }
+
+    /**
+     * Get handlers for a specific service
+     */
+    public function getHandlers($id)
+    {
+        $bt = BukuTamu::with('handlers')->findOrFail($id);
+        
+        return response()->json([
+            'success' => true,
+            'handlers' => $bt->handlers->map(fn($h) => [
+                'user_id' => $h->user_id,
+                'role' => $h->role
+            ])
+        ]);
     }
 
     public function update(Request $request, $id)
@@ -175,6 +201,24 @@ class ServiceController extends Controller
         // Create or update record
         $bt->laporanLayanan()->updateOrCreate(['buku_tamu_id' => $bt->id], $repoData);
 
+        // Sync handlers (additional employees involved)
+        if ($request->has('handlers')) {
+            $handlersData = json_decode($request->handlers, true);
+            if (is_array($handlersData)) {
+                // Clear existing handlers and re-create
+                $bt->handlers()->delete();
+                foreach ($handlersData as $handler) {
+                    if (!empty($handler['user_id'])) {
+                        \App\Models\BukuTamuHandler::create([
+                            'buku_tamu_id' => $bt->id,
+                            'user_id' => $handler['user_id'],
+                            'role' => $handler['role'] ?? 'Membantu',
+                        ]);
+                    }
+                }
+            }
+        }
+
         $response = [
             'success' => true,
             'message' => 'Status dan Laporan berhasil diupdate',
@@ -182,6 +226,13 @@ class ServiceController extends Controller
 
         if ($validated['status_layanan'] === 'Selesai') {
             $response['skd_token'] = $bt->skd_token;
+            $response['whatsapp_group_link'] = \App\Models\SystemSetting::get('whatsapp_group_link', 'https://chat.whatsapp.com/DPrCxwvtrX3DP6Gu84YOef');
+            $response['visitor_name'] = $bt->nama_pengunjung;
+            $response['visitor_instansi'] = $bt->instansi;
+            $response['visitor_service'] = $bt->jenis_layanan;
+            $response['visitor_purpose'] = $bt->keperluan;
+            $response['link_monitor'] = $bt->link_monitor;
+            $response['remote_rating_url'] = $bt->rating_short_url ?: (config('services.gas.rating_url') ? config('services.gas.rating_url') . (str_contains(config('services.gas.rating_url'), '?') ? '&' : '?') . "token=" . $bt->rating_token : null);
         }
 
         return response()->json($response);
@@ -215,7 +266,7 @@ class ServiceController extends Controller
         }
 
         $bt->update([
-            'nama_konsumen' => $validated['nama_pengunjung'],
+            'nama_pengunjung' => $validated['nama_pengunjung'],
             'instansi' => $validated['instansi'],
             'no_hp' => $noHp,
             'email' => $validated['email'],
@@ -244,7 +295,7 @@ class ServiceController extends Controller
                     ->first();
                 
                 if ($existing) {
-                    $namaLain = $existing->bukuTamu->nama_konsumen ?? 'Data Lama/Tidak Diketahui';
+                    $namaLain = $existing->bukuTamu->nama_pengunjung ?? 'Data Lama/Tidak Diketahui';
                     return response()->json([
                         'success' => false,
                         'message' => "Nomor surat '{$newNomorSurat}' sudah digunakan oleh pengunjung: {$namaLain}. Silakan gunakan nomor lain atau periksa kembali data Anda.",
@@ -270,9 +321,43 @@ class ServiceController extends Controller
             }
         }
 
+        // Sync handlers if provided
+        if ($request->has('handlers')) {
+            $handlersData = json_decode($request->handlers, true);
+            if (is_array($handlersData)) {
+                $bt->handlers()->delete();
+                foreach ($handlersData as $handler) {
+                    if (!empty($handler['user_id'])) {
+                        \App\Models\BukuTamuHandler::create([
+                            'buku_tamu_id' => $bt->id,
+                            'user_id' => $handler['user_id'],
+                            'role' => $handler['role'] ?? 'Membantu',
+                        ]);
+                    }
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Data pengunjung berhasil diperbarui',
+        ]);
+    }
+
+    public function updateMonitorLink(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'link_monitor' => 'nullable|url|max:255',
+        ]);
+
+        $bt = BukuTamu::findOrFail($id);
+        $bt->update([
+            'link_monitor' => $validated['link_monitor'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Link monitoring berhasil disimpan',
         ]);
     }
 }

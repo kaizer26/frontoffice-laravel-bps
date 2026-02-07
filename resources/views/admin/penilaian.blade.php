@@ -19,7 +19,7 @@
         <h5 class="card-title"><i class="fas fa-trophy text-warning"></i> Peringkat Petugas</h5>
         <div class="row">
             @foreach($officerRatings->take(5) as $rank => $officer)
-            <div class="col-md-4 mb-3">
+            <div class="col-12 col-md-4 mb-3">
                 <div class="stat-card">
                     <div class="d-flex align-items-center gap-3">
                         <div class="rank-badge" style="width:40px;height:40px;background:#{{ $rank == 0 ? 'fbbf24' : ($rank == 1 ? 'cbd5e1' : ($rank == 2 ? 'f97316' : '64748b')) }};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;">
@@ -68,26 +68,29 @@
             <thead>
                 <tr>
                     <th>Tanggal</th>
-                    <th>Petugas</th>
+                    <th class="d-none d-md-table-cell">Petugas</th>
                     <th>Pengunjung</th>
                     <th>Rating</th>
-                    <th>Komentar</th>
+                    <th class="d-none d-lg-table-cell">Komentar</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($ratings as $rating)
                 <tr>
                     <td>{{ $rating->created_at->format('d/m/Y') }}</td>
-                    <td>{{ $rating->user->name ?? '-' }}</td>
-                    <td>{{ $rating->bukuTamu->nama_konsumen ?? '-' }}</td>
+                    <td class="d-none d-md-table-cell">{{ $rating->user->name ?? '-' }}</td>
+                    <td>
+                        {{ $rating->bukuTamu->nama_pengunjung ?? '-' }}
+                        <div class="d-md-none small text-muted">vs {{ $rating->user->name ?? '-' }}</div>
+                    </td>
                     <td>
                         <span class="text-warning">
                             @for($i = 0; $i < $rating->rating_keseluruhan; $i++)
-                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star" style="font-size: 0.8rem;"></i>
                             @endfor
                         </span>
                     </td>
-                    <td>{{ $rating->komentar ?? '-' }}</td>
+                    <td class="d-none d-lg-table-cell">{{ $rating->komentar ?? '-' }}</td>
                 </tr>
                 @empty
                 <tr>
@@ -176,6 +179,30 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Auto-sync GAS Ratings
+    syncRatings(); // Initial sync
+    setInterval(syncRatings, 120000); // Every 2 minutes
 });
+
+function syncRatings() {
+    fetch('{{ route("admin.ratings.sync") }}')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.synced_count > 0) {
+                // Show toast if Swal or custom toast exists (using Swal if available, or just refresh)
+                if (typeof showToast === 'function') {
+                    showToast(`Sinkronisasi: ${data.synced_count} penilaian baru berhasil diimpor.`);
+                }
+                
+                // Refresh page after a short delay if new ratings were imported to show them in the table
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
+        })
+        .catch(err => console.error('Sync error:', err));
+}
+
 </script>
 @endpush

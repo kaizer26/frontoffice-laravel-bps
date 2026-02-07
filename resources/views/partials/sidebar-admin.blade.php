@@ -33,6 +33,14 @@
             <i class="fas fa-chart-bar"></i>
             <span>Rekap Layanan</span>
         </a>
+        <a href="{{ route('admin.data-registry.index') }}" class="nav-item {{ request()->routeIs('admin.data-registry.*') || request()->routeIs('admin.data-entry.*') ? 'active' : '' }}">
+            <i class="fas fa-table"></i>
+            <span>Daftar Data</span>
+        </a>
+        <a href="{{ route('admin.data-summary.index') }}" class="nav-item {{ request()->routeIs('admin.data-summary.*') ? 'active' : '' }}">
+            <i class="fas fa-layer-group"></i>
+            <span>Rekap Data</span>
+        </a>
         <a href="{{ route('admin.users') }}" class="nav-item {{ request()->routeIs('admin.users') ? 'active' : '' }}">
             <i class="fas fa-users"></i>
             <span>User Management</span>
@@ -40,6 +48,10 @@
         <a href="{{ route('admin.logs') }}" class="nav-item {{ request()->routeIs('admin.logs') ? 'active' : '' }}">
             <i class="fas fa-history"></i>
             <span>Log Aktivitas</span>
+        </a>
+        <a href="{{ \App\Models\SystemSetting::get('whatsapp_group_link', 'https://chat.whatsapp.com/DPrCxwvtrX3DP6Gu84YOef') }}" target="_blank" class="nav-item">
+            <i class="fab fa-whatsapp"></i>
+            <span>Grup Koordinasi WA</span>
         </a>
     </nav>
     

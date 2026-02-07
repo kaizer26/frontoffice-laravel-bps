@@ -15,6 +15,41 @@
     </span>
 </div>
 
+<!-- Modern Filter Card -->
+<div class="card border-0 shadow-sm mb-4" style="border-radius: 15px;">
+    <div class="card-body p-3">
+        <form action="{{ route('admin.logs') }}" method="GET" class="row g-2 align-items-end">
+            <div class="col-lg-4 col-md-6">
+                <label class="form-label small fw-bold text-muted mb-1">Pencarian</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" name="search" class="form-control border-0 bg-light" 
+                           placeholder="Cari aksi, user, atau keterangan..." 
+                           value="{{ request('search') }}" style="border-radius: 0 10px 10px 0;">
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-3 col-6">
+                <label class="form-label small fw-bold text-muted mb-1">Dari Tanggal</label>
+                <input type="date" name="start_date" class="form-control border-0 bg-light" 
+                       value="{{ request('start_date') }}" style="border-radius: 10px;">
+            </div>
+            <div class="col-lg-3 col-md-3 col-6">
+                <label class="form-label small fw-bold text-muted mb-1">Sampai Tanggal</label>
+                <input type="date" name="end_date" class="form-control border-0 bg-light" 
+                       value="{{ request('end_date') }}" style="border-radius: 10px;">
+            </div>
+            <div class="col-lg-2 col-md-12 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1 shadow-sm" style="border-radius: 10px;">
+                    <i class="fas fa-filter"></i><span class="d-none d-md-inline ms-1">Filter</span>
+                </button>
+                <a href="{{ route('admin.logs') }}" class="btn btn-outline-secondary" style="border-radius: 10px;" title="Reset">
+                    <i class="fas fa-times"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card border-0 shadow-sm overflow-hidden">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">

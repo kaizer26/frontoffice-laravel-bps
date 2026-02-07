@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Helpers\ActivityLogger;
+use App\Helpers\UrlHelper;
 
 class BukuTamuController extends Controller
 {
@@ -56,10 +57,25 @@ class BukuTamuController extends Controller
                 $noHp = '62' . $noHp;
             }
 
+            $gasUrl = config('services.gas.rating_url');
+            $remoteRatingUrl = null;
+            if ($gasUrl) {
+                $longRemoteRatingUrl = $gasUrl . (str_contains($gasUrl, '?') ? '&' : '?') . "token=" . $ratingToken;
+                $remoteRatingUrl = UrlHelper::shorten($longRemoteRatingUrl);
+            }
+
+            // Generate SKD Short URL if applicable
+            $skdShortUrl = null;
+            if ($skdToken) {
+                $gasSkdUrl = config('services.gas.skd_url') ?? "https://script.google.com/macros/s/AKfycbx6NAMQSZTBFuda4tpddVggCK87wr0pCLUxpCarjLJYH7OvbTXJ80j_fPLBAXtXWO0/exec";
+                $longSkdUrl = $gasSkdUrl . (str_contains($gasSkdUrl, '?') ? '&' : '?') . "token=" . $skdToken;
+                $skdShortUrl = UrlHelper::shorten($longSkdUrl);
+            }
+
             // Create buku tamu entry
             $bukuTamu = BukuTamu::create([
                 'waktu_kunjungan' => now(),
-                'nama_konsumen' => $validated['nama_pengunjung'],
+                'nama_pengunjung' => $validated['nama_pengunjung'],
                 'instansi' => $validated['instansi'],
                 'no_hp' => $noHp,
                 'email' => $validated['email'],
@@ -70,13 +86,12 @@ class BukuTamuController extends Controller
                 'petugas_online_id' => $validated['petugas_online_id'] ?? null,
                 'user_id' => auth()->id(),
                 'rating_token' => $ratingToken,
+                'rating_short_url' => $remoteRatingUrl,
                 'skd_token' => $skdToken,
+                'skd_short_url' => $skdShortUrl,
             ]);
 
             // If there's a data request with Permintaan Data selected
-            $jenisLayanan = $validated['jenis_layanan'] ?? [];
-            $isPermintaanData = in_array('Permintaan Data', $jenisLayanan);
-            
             if ($isPermintaanData && !empty($validated['nomor_surat'])) {
                 $filePath = null;
                 
@@ -96,29 +111,26 @@ class BukuTamuController extends Controller
                 ]);
             }
 
-            // Generate rating URL only if Langsung
-            $ratingUrl = null;
-            $remoteRatingUrl = null;
-            
-            if ($validated['sarana_kunjungan'] === 'Langsung') {
-                $ratingUrl = route('rating.show', $ratingToken);
-                
-                // Cloud Rating Link (GAS)
-                $gasUrl = config('services.gas.rating_url');
-                if ($gasUrl) {
-                    $remoteRatingUrl = $gasUrl . (str_contains($gasUrl, '?') ? '&' : '?') . "token=" . $ratingToken;
-                }
-            }
+            ActivityLogger::log('CREATE_BUKUTAMU', 'BukuTamu', $bukuTamu->id, "Registrasi pengunjung baru: {$bukuTamu->nama_pengunjung}");
 
-            ActivityLogger::log('CREATE_BUKUTAMU', 'BukuTamu', $bukuTamu->id, "Registrasi pengunjung baru: {$bukuTamu->nama_konsumen}");
+            // Generate links for response
+            $ratingUrl = ($validated['sarana_kunjungan'] === 'Langsung') ? route('rating.show', $ratingToken) : null;
 
             return response()->json([
                 'success' => true,
                 'message' => 'Buku tamu berhasil ditambahkan',
                 'rating_url' => $ratingUrl,
                 'remote_rating_url' => $remoteRatingUrl,
+                'remote_rating_long_url' => $longRemoteRatingUrl ?? null,
                 'rating_token' => $ratingToken,
                 'skd_token' => $skdToken,
+                'skd_short_url' => $skdShortUrl,
+                'skd_long_url' => $longSkdUrl ?? null,
+                'whatsapp_group_link' => \App\Models\SystemSetting::get('whatsapp_group_link', 'https://chat.whatsapp.com/DPrCxwvtrX3DP6Gu84YOef'),
+                'visitor_name' => $bukuTamu->nama_pengunjung,
+                'visitor_instansi' => $bukuTamu->instansi,
+                'visitor_service' => $bukuTamu->jenis_layanan,
+                'visitor_purpose' => $bukuTamu->keperluan,
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -143,9 +155,9 @@ class BukuTamuController extends Controller
             return response()->json([]);
         }
 
-        $visitors = BukuTamu::where('nama_konsumen', 'LIKE', "%$query%")
+        $visitors = BukuTamu::where('nama_pengunjung', 'LIKE', "%$query%")
             ->orWhere('no_hp', 'LIKE', "%$query%")
-            ->select('nama_konsumen', 'no_hp', 'email', 'instansi')
+            ->select('nama_pengunjung', 'no_hp', 'email', 'instansi')
             ->orderBy('waktu_kunjungan', 'desc')
             ->get()
             ->unique('no_hp')
