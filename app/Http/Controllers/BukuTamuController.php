@@ -22,6 +22,7 @@ class BukuTamuController extends Controller
                 'no_hp' => 'required|string|max:20',
                 'email' => 'required|email|max:255',
                 'jenis_layanan' => 'required|array',
+                'jenis_layanan_lainnya' => 'nullable|string|max:255',
                 'keperluan' => 'required|string',
                 'sarana_kunjungan' => 'required|string|in:Langsung,Online',
                 'online_channel' => 'nullable|required_if:sarana_kunjungan,Online|string|in:Pegawai,Kontak Admin',
@@ -59,8 +60,16 @@ class BukuTamuController extends Controller
 
             $gasUrl = config('services.gas.rating_url');
             $remoteRatingUrl = null;
-            if ($gasUrl) {
-                $longRemoteRatingUrl = $gasUrl . (str_contains($gasUrl, '?') ? '&' : '?') . "token=" . $ratingToken;
+            $longRemoteRatingUrl = null;
+            
+            // Build rating URL with token and officer info via Helper
+            $officer = !empty($validated['petugas_online_id']) 
+                ? \App\Models\User::find($validated['petugas_online_id']) 
+                : auth()->user();
+
+            $longRemoteRatingUrl = \App\Helpers\GasSyncHelper::buildRatingUrl($ratingToken, $officer);
+            
+            if ($longRemoteRatingUrl) {
                 $remoteRatingUrl = UrlHelper::shorten($longRemoteRatingUrl);
             }
 
@@ -73,13 +82,21 @@ class BukuTamuController extends Controller
             }
 
             // Create buku tamu entry
+            // Handle Lainnya custom text - replace "Lainnya" with actual custom text if provided
+            $jenisLayananArray = $validated['jenis_layanan'];
+            if (in_array('Lainnya', $jenisLayananArray) && !empty($validated['jenis_layanan_lainnya'])) {
+                $jenisLayananArray = array_map(function($jenis) use ($validated) {
+                    return $jenis === 'Lainnya' ? $validated['jenis_layanan_lainnya'] : $jenis;
+                }, $jenisLayananArray);
+            }
+            
             $bukuTamu = BukuTamu::create([
                 'waktu_kunjungan' => now(),
                 'nama_pengunjung' => $validated['nama_pengunjung'],
                 'instansi' => $validated['instansi'],
                 'no_hp' => $noHp,
                 'email' => $validated['email'],
-                'jenis_layanan' => implode(', ', $validated['jenis_layanan']),
+                'jenis_layanan' => implode(', ', $jenisLayananArray),
                 'keperluan' => $validated['keperluan'],
                 'sarana_kunjungan' => $validated['sarana_kunjungan'],
                 'online_channel' => $validated['online_channel'] ?? null,
@@ -92,7 +109,7 @@ class BukuTamuController extends Controller
             ]);
 
             // If there's a data request with Permintaan Data selected
-            if ($isPermintaanData && !empty($validated['nomor_surat'])) {
+            if ($isPermintaanData) {
                 $filePath = null;
                 
                 if ($request->hasFile('file_surat')) {
@@ -131,6 +148,8 @@ class BukuTamuController extends Controller
                 'visitor_instansi' => $bukuTamu->instansi,
                 'visitor_service' => $bukuTamu->jenis_layanan,
                 'visitor_purpose' => $bukuTamu->keperluan,
+                'visitor_phone' => $bukuTamu->no_hp,
+                'visitor_email' => $bukuTamu->email,
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -165,5 +184,52 @@ class BukuTamuController extends Controller
             ->values();
 
         return response()->json($visitors);
+    }
+
+    /**
+     * Send confirmation email notification to visitor
+     */
+    public function sendVisitorNotification(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'name' => 'required|string',
+            'instansi' => 'nullable|string',
+            'layanan' => 'nullable|string',
+            'keperluan' => 'nullable|string',
+            'status' => 'nullable|string',
+        ]);
+
+        $status = $validated['status'] ?? 'Diterima';
+
+        try {
+            $emailContent = "Yth. {$validated['name']},\n\n";
+            $emailContent .= "Terima kasih telah mengunjungi Pelayanan Statistik Terpadu (PST) Badan Pusat Statistik.\n\n";
+            $emailContent .= "Berikut adalah data kunjungan Anda:\n";
+            $emailContent .= "• Layanan: {$validated['layanan']}\n";
+            $emailContent .= "• Instansi: " . ($validated['instansi'] ?: '-') . "\n";
+            $emailContent .= "• Keperluan: " . ($validated['keperluan'] ?: '-') . "\n";
+            $emailContent .= "• Status: {$status}\n\n";
+            $emailContent .= "Petugas kami akan segera memproses permintaan Anda. Mohon menunggu informasi selanjutnya.\n\n";
+            $emailContent .= "Salam,\nTim PST BPS";
+
+            \Illuminate\Support\Facades\Mail::raw($emailContent, function ($message) use ($validated) {
+                $message->to($validated['email'])
+                    ->subject('Konfirmasi Pendaftaran PST BPS');
+            });
+
+            ActivityLogger::log('SEND_VISITOR_EMAIL', 'BukuTamu', null, "Email konfirmasi dikirim ke {$validated['email']}");
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Email berhasil dikirim'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Send visitor notification error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengirim email: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

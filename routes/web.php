@@ -59,10 +59,15 @@ Route::middleware('auth')->group(function () {
         Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
         Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
         Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
+        Route::post('/users/sync-all', [AdminController::class, 'syncAllOfficers'])->name('users.sync-all');
         Route::post('/settings/update', [AdminController::class, 'updateSetting'])->name('settings.update');
         Route::get('/logs', [AdminController::class, 'activityLogs'])->name('logs');
         Route::get('/backup', [BackupController::class, 'download'])->name('backup');
         Route::get('/ratings/sync', [RatingSyncController::class, 'sync'])->name('ratings.sync');
+        
+        // Reply Letter Template routes
+        Route::post('/reply-template/upload', [AdminController::class, 'uploadReplyTemplate'])->name('reply-template.upload');
+        Route::post('/reply-template/generate', [AdminController::class, 'generateReplyDocument'])->name('reply-template.generate');
         
         // Data Registry routes
         Route::resource('data-registry', DataRegistryController::class);
@@ -105,7 +110,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/services/{id}/visitor', [ServiceController::class, 'updateVisitor'])->name('services.visitor.update');
         Route::put('/services/{id}/monitor-link', [ServiceController::class, 'updateMonitorLink'])->name('services.monitor-link.update');
         Route::get('/services/{id}/handlers', [ServiceController::class, 'getHandlers'])->name('services.handlers');
-        Route::post('/skd/mark-as-filled', [ServiceController::class, 'markSkdAsFilled'])->name('skd.mark-as-filled');
+        Route::post('/skd/mark-as-filled', [SKDController::class, 'markAsFilled'])->name('skd.mark-as-filled');
         Route::get('/pengunjung/search', [BukuTamuController::class, 'searchPengunjung'])->name('pengunjung.search');
         Route::put('/admin/setting', [AdminController::class, 'updateSetting'])->name('settings.update');
 
@@ -123,6 +128,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/absensi/clock-in', [AbsensiController::class, 'clockIn'])->name('absensi.clock-in');
         Route::post('/absensi/clock-out', [AbsensiController::class, 'clockOut'])->name('absensi.clock-out');
         Route::get('/absensi/today', [AbsensiController::class, 'todaySummary'])->name('absensi.today-summary');
+
+        // Visitor Notification API
+        Route::post('/send-visitor-notification', [BukuTamuController::class, 'sendVisitorNotification'])->name('visitor-notification.send');
     });
 });
 

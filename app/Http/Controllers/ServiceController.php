@@ -31,8 +31,10 @@ class ServiceController extends Controller
                     'keperluan' => $bt->keperluan,
                     'jenis_layanan' => $bt->jenis_layanan,
                     'nomor_surat' => optional($permintaan)->nomor_surat ?? '-',
+                    'permintaan_data_id' => optional($permintaan)->id,
                     'tanggal_surat' => optional($permintaan)->tanggal_surat ? $permintaan->tanggal_surat->format('Y-m-d') : null,
                     'file_surat' => ($permintaan && $permintaan->file_surat) ? asset('storage/' . $permintaan->file_surat) : null,
+                    'surat_lengkap' => $permintaan && !empty($permintaan->nomor_surat) && $permintaan->tanggal_surat && $permintaan->file_surat,
                     'status_layanan' => $bt->status_layanan,
                     'tanggal_kunjungan' => $bt->waktu_kunjungan ? $bt->waktu_kunjungan->format('Y-m-d H:i') : null,
                     'tanggal_update' => $bt->tanggal_update ? $bt->tanggal_update->format('Y-m-d H:i') : $bt->created_at->format('Y-m-d H:i'),
@@ -44,9 +46,13 @@ class ServiceController extends Controller
                     'rating_token' => $bt->rating_token,
                     'skd_filled' => (bool)$bt->skd_filled,
                     'rated' => (bool)$bt->rated,
-                    'remote_rating_url' => $bt->rating_short_url ?: (config('services.gas.rating_url') ? config('services.gas.rating_url') . (str_contains(config('services.gas.rating_url'), '?') ? '&' : '?') . "token=" . $bt->rating_token : null),
-                    'remote_rating_long_url' => config('services.gas.rating_url') ? config('services.gas.rating_url') . (str_contains(config('services.gas.rating_url'), '?') ? '&' : '?') . "token=" . $bt->rating_token : null,
-                    'skd_short_url' => $bt->skd_short_url,
+                    // Short URL - only use stored shortlink, don't fallback to long URL
+                    'remote_rating_url' => $bt->rating_short_url ?: null,
+                    // Long URL - always generate fresh with officer info via Helper
+                    'remote_rating_long_url' => \App\Helpers\GasSyncHelper::buildRatingUrl($bt->rating_token, $bt->petugasOnline ?: $bt->user),
+                    // SKD Short URL - only use stored shortlink
+                    'skd_short_url' => $bt->skd_short_url ?: null,
+                    // SKD Long URL - always generate fresh
                     'skd_long_url' => $bt->skd_token ? (config('services.gas.skd_url') ?: "https://script.google.com/macros/s/AKfycbx6NAMQSZTBFuda4tpddVggCK87wr0pCLUxpCarjLJYH7OvbTXJ80j_fPLBAXtXWO0/exec") . (str_contains(config('services.gas.skd_url') ?: "exec", '?') ? '&' : '?') . "token=" . $bt->skd_token : null,
                     'link_monitor' => $bt->link_monitor,
                     'laporan' => $bt->laporanLayanan ? [
@@ -93,6 +99,7 @@ class ServiceController extends Controller
                     'keperluan' => $bt->keperluan,
                     'jenis_layanan' => $bt->jenis_layanan,
                     'nomor_surat' => optional($permintaan)->nomor_surat ?? '-',
+                    'permintaan_data_id' => optional($permintaan)->id,
                     'tanggal_surat' => optional($permintaan)->tanggal_surat ? $permintaan->tanggal_surat->format('Y-m-d') : null,
                     'file_surat' => ($permintaan && $permintaan->file_surat) ? asset('storage/' . $permintaan->file_surat) : null,
                     'status_layanan' => $bt->status_layanan,
@@ -107,8 +114,8 @@ class ServiceController extends Controller
                     'rating_token' => $bt->rating_token,
                     'skd_filled' => (bool)$bt->skd_filled,
                     'rated' => (bool)$bt->rated,
-                    'remote_rating_url' => $bt->rating_short_url ?: (config('services.gas.rating_url') ? config('services.gas.rating_url') . (str_contains(config('services.gas.rating_url'), '?') ? '&' : '?') . "token=" . $bt->rating_token : null),
-                    'remote_rating_long_url' => config('services.gas.rating_url') ? config('services.gas.rating_url') . (str_contains(config('services.gas.rating_url'), '?') ? '&' : '?') . "token=" . $bt->rating_token : null,
+                    'remote_rating_url' => $bt->rating_short_url ?: \App\Helpers\GasSyncHelper::buildRatingUrl($bt->rating_token, $bt->petugasOnline ?: $bt->user),
+                    'remote_rating_long_url' => \App\Helpers\GasSyncHelper::buildRatingUrl($bt->rating_token, $bt->petugasOnline ?: $bt->user),
                     'skd_short_url' => $bt->skd_short_url,
                     'skd_long_url' => $bt->skd_token ? (config('services.gas.skd_url') ?: "https://script.google.com/macros/s/AKfycbx6NAMQSZTBFuda4tpddVggCK87wr0pCLUxpCarjLJYH7OvbTXJ80j_fPLBAXtXWO0/exec") . (str_contains(config('services.gas.skd_url') ?: "exec", '?') ? '&' : '?') . "token=" . $bt->skd_token : null,
                     'link_monitor' => $bt->link_monitor,
@@ -222,18 +229,18 @@ class ServiceController extends Controller
         $response = [
             'success' => true,
             'message' => 'Status dan Laporan berhasil diupdate',
+            'skd_token' => $bt->skd_token,
+            'whatsapp_group_link' => \App\Models\SystemSetting::get('whatsapp_group_link', 'https://chat.whatsapp.com/DPrCxwvtrX3DP6Gu84YOef'),
+            'visitor_name' => $bt->nama_pengunjung,
+            'visitor_instansi' => $bt->instansi,
+            'visitor_service' => $bt->jenis_layanan,
+            'visitor_purpose' => $bt->keperluan,
+            'visitor_phone' => $bt->no_hp,
+            'visitor_email' => $bt->email,
+            'link_monitor' => $bt->link_monitor,
+            'status' => $bt->status_layanan,
+            'remote_rating_url' => $bt->rating_short_url ?: \App\Helpers\GasSyncHelper::buildRatingUrl($bt->rating_token, $bt->petugasOnline ?: $bt->user),
         ];
-
-        if ($validated['status_layanan'] === 'Selesai') {
-            $response['skd_token'] = $bt->skd_token;
-            $response['whatsapp_group_link'] = \App\Models\SystemSetting::get('whatsapp_group_link', 'https://chat.whatsapp.com/DPrCxwvtrX3DP6Gu84YOef');
-            $response['visitor_name'] = $bt->nama_pengunjung;
-            $response['visitor_instansi'] = $bt->instansi;
-            $response['visitor_service'] = $bt->jenis_layanan;
-            $response['visitor_purpose'] = $bt->keperluan;
-            $response['link_monitor'] = $bt->link_monitor;
-            $response['remote_rating_url'] = $bt->rating_short_url ?: (config('services.gas.rating_url') ? config('services.gas.rating_url') . (str_contains(config('services.gas.rating_url'), '?') ? '&' : '?') . "token=" . $bt->rating_token : null);
-        }
 
         return response()->json($response);
     }

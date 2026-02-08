@@ -307,6 +307,29 @@
                                 onchange="updateAdminSetting('reply_letter_default_code', this.value, 'Kode Surat Default')">
                             <div class="form-text mt-1" style="font-size: 0.7rem;">Digunakan jika kode surat tidak diinput manual.</div>
                         </div>
+                        
+                        <hr class="my-3">
+                        
+                        <div class="mb-3">
+                            <label class="small text-muted mb-2 d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-file-word text-primary me-1"></i> Template Surat Balasan (.docx)</span>
+                                @if(\App\Models\SystemSetting::get('reply_letter_template'))
+                                <span class="badge bg-success"><i class="fas fa-check"></i> Ada</span>
+                                @endif
+                            </label>
+                            <input type="file" class="form-control form-control-sm" id="replyTemplateFile" accept=".docx">
+                            <button type="button" class="btn btn-primary btn-sm w-100 mt-2" onclick="uploadReplyTemplate()">
+                                <i class="fas fa-upload"></i> Upload Template
+                            </button>
+                            @if(\App\Models\SystemSetting::get('reply_letter_template'))
+                            <a href="/storage/{{ \App\Models\SystemSetting::get('reply_letter_template') }}" download class="btn btn-outline-secondary btn-sm w-100 mt-1">
+                                <i class="fas fa-download"></i> Download Template Aktif
+                            </a>
+                            @endif
+                            <div class="form-text mt-2" style="font-size: 0.65rem;">
+                                <strong>Placeholder:</strong> <code>{{'{{'}}NOMOR_SURAT}}</code>, <code>{{'{{'}}TANGGAL_SURAT}}</code>, <code>{{'{{'}}TUJUAN}}</code>, <code>{{'{{'}}NOMOR_SURAT_PERMINTAAN_DATA}}</code>, <code>{{'{{'}}KEPERLUAN}}</code>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -387,7 +410,9 @@ loadStats();
 loadAttendanceSummaryAdmin();
 
 function loadStats() {
-    fetch('/api/stats/admin')
+    fetch('/api/stats/admin', {
+        headers: { 'Accept': 'application/json' }
+    })
         .then(res => res.json())
         .then(data => {
             document.getElementById('statVisitorsToday').textContent = data.visitors?.today || 0;
@@ -555,7 +580,9 @@ function manualRefresh() {
 }
 
 function syncRatings() {
-    fetch('{{ route("admin.ratings.sync") }}')
+    fetch('{{ route("admin.ratings.sync") }}', {
+        headers: { 'Accept': 'application/json' }
+    })
         .then(res => res.json())
         .then(data => {
             if (data.success && data.synced_count > 0) {
@@ -567,7 +594,9 @@ function syncRatings() {
 }
 
 function loadAttendanceSummaryAdmin() {
-    fetch('/api/absensi/today')
+    fetch('/api/absensi/today', {
+        headers: { 'Accept': 'application/json' }
+    })
         .then(res => res.json())
         .then(data => {
             if (!data.success) return;
@@ -604,6 +633,35 @@ function loadAttendanceSummaryAdmin() {
             html += '</div>';
             container.innerHTML = html;
         });
+}
+
+function uploadReplyTemplate() {
+    const fileInput = document.getElementById('replyTemplateFile');
+    if (!fileInput.files[0]) {
+        showToast('Pilih file template (.docx) terlebih dahulu', 'error');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('template', fileInput.files[0]);
+    formData.append('_token', '{{ csrf_token() }}');
+    
+    fetch('/admin/reply-template/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Template berhasil diupload!', 'success');
+            location.reload();
+        } else {
+            showToast('Gagal: ' + (data.message || 'Unknown error'), 'error');
+        }
+    })
+    .catch(err => {
+        showToast('Error: ' + err.message, 'error');
+    });
 }
 
 // Start everything

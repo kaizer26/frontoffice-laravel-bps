@@ -10,6 +10,9 @@
         <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
             <i class="fas fa-plus"></i> Tambah
         </button>
+        <button class="btn btn-sm btn-outline-success" onclick="syncAllOfficersToGas(this)">
+            <i class="fas fa-sync"></i> Sync Petugas ke GAS
+        </button>
     </div>
     <div class="text-end ms-auto me-3">
         <div class="fw-bold small">{{ now()->translatedFormat('d M Y') }}</div>
@@ -283,6 +286,38 @@ function confirmDeleteUser(id, name) {
     document.getElementById('deleteUserForm').action = '/admin/users/' + id;
     document.getElementById('deleteUserName').textContent = name;
     new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
+}
+
+function syncAllOfficersToGas(btn) {
+    const oldHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+
+    fetch('{{ route('admin.users.sync-all') }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+        
+        if (data.success) {
+            Swal.fire('Berhasil!', data.message, 'success').then(() => {
+                window.location.reload();
+            });
+        } else {
+            Swal.fire('Gagal!', data.message || 'Terjadi kesalahan', 'error');
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+        Swal.fire('Error!', err.message, 'error');
+    });
 }
 </script>
 @endpush

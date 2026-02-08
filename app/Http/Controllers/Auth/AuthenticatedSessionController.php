@@ -28,6 +28,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // Safety: If the intended URL is an API endpoint, redirect to dashboard instead
+        $intended = session()->get('url.intended');
+        if ($intended && str_contains($intended, '/api/')) {
+            return redirect()->route('dashboard');
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

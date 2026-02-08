@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Hash;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use Illuminate\Support\Str;
 use App\Helpers\ActivityLogger;
 
 class AdminController extends Controller
@@ -373,20 +374,21 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'User berhasil diupdate');
     }
 
-    public function destroyUser(User $user)
+    public function syncAllOfficers()
     {
-        if ($user->id === auth()->id()) {
-            return redirect()->back()->with('error', 'Tidak bisa menghapus akun sendiri!');
+        $result = \App\Helpers\GasSyncHelper::syncAllUnsyncedOfficers();
+        
+        if ($result['success']) {
+            if ($result['count'] > 0) {
+                ActivityLogger::log('SYNC_OFFICERS_BATCH', 'User', null, "Sinkronisasi massal berhasil: {$result['count']} petugas didaftarkan ke GAS.");
+                return response()->json(['success' => true, 'message' => "Berhasil menyinkronkan {$result['count']} petugas."]);
+            }
+            return response()->json(['success' => true, 'message' => 'Semua petugas sudah sinkron.']);
         }
-
-        $userName = $user->name;
-        $userEmail = $user->email;
-        $user->delete();
-
-        ActivityLogger::log('DELETE_USER', 'User', null, "Menghapus user: $userName ($userEmail)");
-
-        return redirect()->back()->with('success', 'User berhasil dihapus');
+        
+        return response()->json(['success' => false, 'message' => 'Gagal sinkronisasi: ' . $result['message']], 500);
     }
+
 
     public function downloadJadwalTemplate()
     {
@@ -534,5 +536,153 @@ class AdminController extends Controller
         $logs = $query->latest()->paginate(50)->withQueryString();
 
         return view('admin.logs', compact('logs'));
+    }
+
+    /**
+     * Upload reply letter Word template.
+     */
+    public function uploadReplyTemplate(Request $request)
+    {
+        $request->validate([
+            'template' => 'required|mimes:docx|max:5120'
+        ]);
+
+        try {
+            $file = $request->file('template');
+            $filename = 'reply_letter_' . time() . '.docx';
+            
+            $path = $file->storeAs('templates', $filename, 'public');
+            
+            \App\Models\SystemSetting::set('reply_letter_template', $path);
+            
+            ActivityLogger::log('UPLOAD_REPLY_TEMPLATE', 'SystemSetting', null, "Upload template surat balasan: $filename");
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Template berhasil diupload',
+                'path' => $filename
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Template upload error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal upload template: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate reply letter document from template.
+     */
+    public function generateReplyDocument(Request $request)
+    {
+        $validated = $request->validate([
+            'service_id' => 'required|integer',
+            'nomor_surat' => 'required|string',
+            'tanggal_surat' => 'required|date',
+            'tujuan' => 'required|string',
+            'perihal' => 'nullable|string',
+            'catatan' => 'nullable|string'
+        ]);
+
+        try {
+            $templatePath = \App\Models\SystemSetting::get('reply_letter_template');
+            if (!$templatePath) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Template surat belum diupload oleh admin'
+                ], 400);
+            }
+
+            $fullPath = \Illuminate\Support\Facades\Storage::disk('public')->path($templatePath);
+            if (!file_exists($fullPath)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'File template tidak ditemukan'
+                ], 404);
+            }
+
+            // Get service data
+            $permintaan = \App\Models\PermintaanData::with('bukuTamu')->find($validated['service_id']);
+            if (!$permintaan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data layanan tidak ditemukan'
+                ], 404);
+            }
+
+            // Load template
+            $templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor($fullPath);
+            
+            // Replace placeholders
+            $replacements = [
+                'NOMOR_SURAT' => $validated['nomor_surat'],
+                'TANGGAL_SURAT' => Carbon::parse($validated['tanggal_surat'])->translatedFormat('d F Y'),
+                'TUJUAN' => $validated['tujuan'],
+                'NOMOR_SURAT_PERMINTAAN_DATA' => $permintaan->nomor_surat ?? '-',
+                'KEPERLUAN' => $permintaan->bukuTamu->keperluan ?? '-'
+            ];
+            
+            foreach ($replacements as $key => $value) {
+                $templateProcessor->setValue('{{' . $key . '}}', $value);
+            }
+
+            // Ensure the generated number is not already used by another record
+            $existingWithNumber = \App\Models\DataRequestReply::where('nomor_surat', $validated['nomor_surat'])
+                ->where('permintaan_data_id', '!=', $permintaan->id)
+                ->first();
+            
+            if ($existingWithNumber) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nomor surat balasan ' . $validated['nomor_surat'] . ' sudah digunakan oleh data lain.'
+                ], 422);
+            }
+
+            // Save generated document
+            $cleanName = Str::slug($permintaan->bukuTamu->nama_pengunjung);
+            $cleanInstansi = Str::slug($permintaan->bukuTamu->instansi);
+            $dateSuffix = date('Ymd');
+            
+            $outputFilename = "replies/surat_balasan_{$permintaan->id}_{$cleanName}_{$cleanInstansi}_{$dateSuffix}.docx";
+            $outputPath = storage_path('app/public/' . $outputFilename);
+            
+            // Ensure directory exists
+            if (!is_dir(dirname($outputPath))) {
+                mkdir(dirname($outputPath), 0755, true);
+            }
+            
+            $templateProcessor->saveAs($outputPath);
+
+            // Update the reply record
+            \App\Models\DataRequestReply::updateOrCreate(
+                ['permintaan_data_id' => $permintaan->id],
+                [
+                    'nomor_surat' => $validated['nomor_surat'],
+                    'tanggal_surat' => $validated['tanggal_surat'],
+                    'tujuan' => $validated['tujuan'],
+                    'perihal' => $request->input('perihal'),
+                    'catatan' => $request->input('catatan'),
+                    'file_surat' => $outputFilename,
+                    'nomor_urut' => $request->input('nomor_urut', 1),
+                    'kode_surat' => $request->input('kode_surat', '02.04')
+                ]
+            );
+
+            ActivityLogger::log('GENERATE_REPLY_LETTER', 'DataRequestReply', $permintaan->id, "Membuat surat balasan: {$validated['nomor_surat']}");
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Surat balasan berhasil dibuat',
+                'download_url' => '/storage/' . $outputFilename
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Generate reply document error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat surat: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

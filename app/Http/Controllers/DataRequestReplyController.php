@@ -96,7 +96,11 @@ class DataRequestReplyController extends Controller
         $reply = DataRequestReply::where('permintaan_data_id', $requestId)->first();
         
         if (!$reply) {
-            return response()->json(['success' => false, 'message' => 'Belum ada surat balasan.'], 404);
+            return response()->json([
+                'success' => true,
+                'reply' => null,
+                'message' => 'Belum ada surat balasan.'
+            ]);
         }
         
         return response()->json([

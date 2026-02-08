@@ -30,7 +30,7 @@ class UrlHelper
                 return trim($response->body());
             }
 
-            Log::warning('is.gd shortening failed for URL: ' . $url . ' Status: ' . $response->status() . ' Body: ' . $response->body());
+            Log::warning('is.gd shortening failed for URL: ' . $url . ' Status: ' . $response->status() . ' Reason: ' . $response->reason() . ' Body: ' . $response->body());
             return $url; // Fallback to original URL
         } catch (\Exception $e) {
             Log::error('UrlHelper shorten error for URL: ' . $url . ' Error: ' . $e->getMessage());

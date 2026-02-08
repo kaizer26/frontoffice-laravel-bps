@@ -224,13 +224,24 @@
                                 <label class="form-check-label" for="permintaan">Permintaan Data</label>
                             </div>
                             <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="jenis_layanan[]" value="Rekomendasi Statistik" id="rekomendasi">
+                                <label class="form-check-label" for="rekomendasi">Rekomendasi Statistik</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="jenis_layanan[]" value="Perpustakaan" id="perpustakaan">
+                                <label class="form-check-label" for="perpustakaan">Perpustakaan</label>
+                            </div>
+                            <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="jenis_layanan[]" value="Pengaduan" id="pengaduan">
                                 <label class="form-check-label" for="pengaduan">Pengaduan</label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="jenis_layanan[]" value="Lainnya" id="lainnya">
+                                <input class="form-check-input" type="checkbox" name="jenis_layanan[]" value="Lainnya" id="lainnya" onchange="toggleLainnyaField()">
                                 <label class="form-check-label" for="lainnya">Lainnya</label>
                             </div>
+                        </div>
+                        <div id="lainnyaField" class="mt-2" style="display:none;">
+                            <input type="text" class="form-control" name="jenis_layanan_lainnya" id="jenis_layanan_lainnya" placeholder="Tuliskan jenis layanan lainnya...">
                         </div>
                     </div>
                     
@@ -241,16 +252,21 @@
                                 <h6 class="card-title"><i class="fas fa-file-alt"></i> Detail Surat Permintaan</h6>
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Nomor Surat <span class="text-danger">*</span></label>
+                                        <label class="form-label">Nomor Surat <small class="text-muted">(opsional)</small></label>
                                         <input type="text" class="form-control" name="nomor_surat" id="nomor_surat">
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Tanggal Surat <span class="text-danger">*</span></label>
+                                        <label class="form-label">Tanggal Surat <small class="text-muted">(opsional)</small></label>
                                         <input type="date" class="form-control" name="tanggal_surat" id="tanggal_surat">
                                     </div>
                                     <div class="col-12 mb-3">
-                                        <label class="form-label">Upload Surat (PDF/Gambar, max 5MB)</label>
+                                        <label class="form-label">Upload Surat (PDF/Gambar, max 5MB) <small class="text-muted">(opsional)</small></label>
                                         <input type="file" class="form-control" name="file_surat" accept=".pdf,.jpg,.jpeg,.png">
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="alert alert-info py-2 mb-0">
+                                            <small><i class="fas fa-info-circle"></i> Jika pengunjung belum membawa surat, bisa diisi dan dilengkapi nanti melalui Edit Data.</small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -489,8 +505,9 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label class="form-label">Foto Bukti Pelayanan (Bisa pilih banyak)</label>
+                            <label class="form-label">Foto Bukti Pelayanan <span class="text-danger">* (min. 1 foto)</span></label>
                             <input type="file" class="form-control" id="modalFotoBukti" multiple accept="image/png, image/jpeg, image/jpg, image/webp">
+                            <small class="text-muted">Wajib upload minimal 1 foto dokumentasi pelayanan untuk Konsultasi, Rekomendasi Statistik, dan Pengaduan.</small>
                         </div>
 
                         <div class="mb-3">
@@ -538,6 +555,9 @@
                                         <button type="button" class="btn btn-sm btn-primary flex-grow-1" onclick="generateReplyNumber()">
                                             <i class="fas fa-sync"></i> Refresh No
                                         </button>
+                                        <button type="button" class="btn btn-sm btn-success flex-grow-1" onclick="saveReplyLetter()">
+                                            <i class="fas fa-check"></i> Simpan & Lanjutkan
+                                        </button>
                                         <button type="button" class="btn btn-sm btn-danger" onclick="cancelReplyDraft()">
                                             <i class="fas fa-times"></i> Batal
                                         </button>
@@ -553,6 +573,9 @@
                                     </div>
                                     <div class="small fw-bold" id="previewReplyNomor"></div>
                                     <div class="small text-muted" id="previewReplyTujuan"></div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary w-100 mt-2" onclick="generateWordDocument()">
+                                        <i class="fas fa-file-word"></i> Download Surat (Word)
+                                    </button>
                                 </div>
 
                                 <button type="button" class="btn btn-primary btn-sm w-100" id="btnShowReplyForm" onclick="showReplyForm()">
@@ -721,13 +744,24 @@
                                     <label class="form-check-label" for="edit_permintaan">Permintaan Data</label>
                                 </div>
                                 <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="jenis_layanan[]" value="Rekomendasi Statistik" id="edit_rekomendasi">
+                                    <label class="form-check-label" for="edit_rekomendasi">Rekomendasi Statistik</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="jenis_layanan[]" value="Perpustakaan" id="edit_perpustakaan">
+                                    <label class="form-check-label" for="edit_perpustakaan">Perpustakaan</label>
+                                </div>
+                                <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="jenis_layanan[]" value="Pengaduan" id="edit_pengaduan">
                                     <label class="form-check-label" for="edit_pengaduan">Pengaduan</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="jenis_layanan[]" value="Lainnya" id="edit_lainnya">
+                                    <input class="form-check-input" type="checkbox" name="jenis_layanan[]" value="Lainnya" id="edit_lainnya" onchange="toggleEditLainnyaField()">
                                     <label class="form-check-label" for="edit_lainnya">Lainnya</label>
                                 </div>
+                            </div>
+                            <div id="editLainnyaField" class="mt-2" style="display:none;">
+                                <input type="text" class="form-control" name="jenis_layanan_lainnya" id="edit_jenis_layanan_lainnya" placeholder="Tuliskan jenis layanan lainnya...">
                             </div>
                         </div>
 
@@ -930,6 +964,7 @@
 @push('scripts')
 <script>
 let currentServiceId = null;
+let currentPermintaanDataId = null;
 
 // Load stats on page load
 loadStats();
@@ -953,17 +988,28 @@ document.addEventListener('DOMContentLoaded', function() {
 function toggleSuratFields() {
     const permintaan = document.getElementById('permintaan');
     const suratFields = document.getElementById('suratFields');
-    const nomorSurat = document.getElementById('nomor_surat');
-    const tanggalSurat = document.getElementById('tanggal_surat');
     
     if (permintaan.checked) {
         suratFields.style.display = 'block';
-        nomorSurat.required = true;
-        tanggalSurat.required = true;
     } else {
         suratFields.style.display = 'none';
-        nomorSurat.required = false;
-        tanggalSurat.required = false;
+        document.getElementById('nomor_surat').value = '';
+        document.getElementById('tanggal_surat').value = '';
+    }
+}
+
+function toggleLainnyaField() {
+    const lainnya = document.getElementById('lainnya');
+    const lainnyaField = document.getElementById('lainnyaField');
+    const lainnyaInput = document.getElementById('jenis_layanan_lainnya');
+    
+    if (lainnya && lainnya.checked) {
+        lainnyaField.style.display = 'block';
+        lainnyaInput.required = true;
+    } else {
+        lainnyaField.style.display = 'none';
+        lainnyaInput.required = false;
+        lainnyaInput.value = '';
     }
 }
 
@@ -1118,7 +1164,9 @@ function addHandlerRowWithData(selectedUserId, selectedRole) {
 }
 
 function loadStats() {
-    fetch('/api/stats/petugas')
+    fetch('/api/stats/petugas', {
+        headers: { 'Accept': 'application/json' }
+    })
         .then(res => res.json())
         .then(data => {
             document.getElementById('statVisitorsToday').textContent = data.visitors?.today || 0;
@@ -1130,7 +1178,9 @@ function loadStats() {
 }
 
 function loadAttendanceStatus() {
-    fetch('/api/absensi/status')
+    fetch('/api/absensi/status', {
+        headers: { 'Accept': 'application/json' }
+    })
         .then(res => res.json())
         .then(data => {
             if (!data.success) return;
@@ -1299,7 +1349,7 @@ document.getElementById('bukuTamuForm').addEventListener('submit', function(e) {
             // Show rating link modal with flexible local URL
             if (data.rating_token || data.remote_rating_url) {
                 const localRatingUrl = data.rating_token ? `${window.location.origin}/rating/${data.rating_token}` : null;
-                showRatingLinkModal(localRatingUrl, data.skd_token, data.remote_rating_url, data.skd_short_url, data.remote_rating_long_url, data.skd_long_url, data.whatsapp_group_link, data.visitor_name, data.visitor_purpose, data.visitor_instansi, data.visitor_service, null);
+                showRatingLinkModal(localRatingUrl, data.skd_token, data.remote_rating_url, data.skd_short_url, data.remote_rating_long_url, data.skd_long_url, data.whatsapp_group_link, data.visitor_name, data.visitor_purpose, data.visitor_instansi, data.visitor_service, null, data.visitor_phone, data.visitor_email, 'Diterima');
             }
         } else {
             showToast('Error: ' + (data.message || 'Terjadi kesalahan'), 'error');
@@ -1312,7 +1362,7 @@ document.getElementById('bukuTamuForm').addEventListener('submit', function(e) {
     });
 });
 
-function showRatingLinkModal(ratingUrl, skdToken, remoteRatingUrl = null, skdShortUrl = null, remoteRatingLongUrl = null, skdLongUrl = null, waGroupLink = null, visitorName = null, visitorPurpose = null, visitorInstansi = null, visitorService = null, linkMonitor = null) {
+function showRatingLinkModal(ratingUrl, skdToken, remoteRatingUrl = null, skdShortUrl = null, remoteRatingLongUrl = null, skdLongUrl = null, waGroupLink = null, visitorName = null, visitorPurpose = null, visitorInstansi = null, visitorService = null, linkMonitor = null, visitorPhone = null, visitorEmail = null, status = 'Diterima') {
     const defaultSkdLongUrl = `https://script.google.com/macros/s/AKfycbx6NAMQSZTBFuda4tpddVggCK87wr0pCLUxpCarjLJYH7OvbTXJ80j_fPLBAXtXWO0/exec?token=${skdToken}`;
     const fullSkdUrl = skdShortUrl || defaultSkdLongUrl;
     const finalSkdLongUrl = skdLongUrl || defaultSkdLongUrl;
@@ -1424,6 +1474,25 @@ function showRatingLinkModal(ratingUrl, skdToken, remoteRatingUrl = null, skdSho
                             <div class="alert alert-primary mt-4 mb-0 py-2 border-0 bg-primary-subtle" style="font-size: 0.8rem;" id="modalInstruction">
                                 <i class="fas fa-info-circle me-1"></i> Gunakan <b>Shortlink</b> untuk WhatsApp agar lebih ringkas, atau <b>Link Asli</b> jika Shortlink bermasalah.
                             </div>
+                            
+                            <!-- Visitor Notification Section -->
+                            <div id="visitorNotificationSection" class="mt-3 p-3 bg-warning-subtle rounded border border-warning-subtle text-start" style="display:none;">
+                                <h6 class="fw-bold text-warning mb-2"><i class="fas fa-bell"></i> Notifikasi Pengunjung</h6>
+                                <p class="small text-muted mb-3">Kirim konfirmasi registrasi ke pengunjung via WhatsApp atau Email.</p>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <a id="waVisitorBtn" href="#" target="_blank" class="btn btn-success w-100 fw-bold">
+                                            <i class="fab fa-whatsapp"></i> WhatsApp
+                                        </a>
+                                    </div>
+                                    <div class="col-6">
+                                        <button type="button" id="emailVisitorBtn" class="btn btn-primary w-100 fw-bold" onclick="sendVisitorEmail()">
+                                            <i class="fas fa-envelope"></i> Email
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="emailStatus" class="small mt-2" style="display:none;"></div>
+                            </div>
                         </div>
                         <div class="modal-footer bg-light border-top-0">
                             <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal">Selesai</button>
@@ -1443,7 +1512,12 @@ function showRatingLinkModal(ratingUrl, skdToken, remoteRatingUrl = null, skdSho
     if (ratingUrl) {
         const qrRating = document.getElementById('qrRatingContainer');
         qrRating.innerHTML = '';
-        new QRCode(qrRating, { text: ratingUrl, width: 120, height: 120 });
+        try {
+            new QRCode(qrRating, { text: ratingUrl, width: 120, height: 120 });
+        } catch(e) {
+            qrRating.innerHTML = '<small class="text-danger">QR tidak tersedia<br>(URL terlalu panjang)</small>';
+            console.error('QR Rating Error:', e);
+        }
         document.getElementById('ratingInput').value = ratingUrl;
         document.getElementById('waRating').href = 'https://wa.me/?text=' + encodeURIComponent('Halo, mohon bantu kami meningkatkan layanan dengan memberikan penilaian petugas PST melalui link: ' + ratingUrl);
         ratingCol.style.display = 'block';
@@ -1451,28 +1525,60 @@ function showRatingLinkModal(ratingUrl, skdToken, remoteRatingUrl = null, skdSho
         ratingCol.style.display = 'none';
     }
 
-    // Handle Remote Rating
-    if (remoteRatingUrl) {
+    // Handle Remote Rating - show both short and long URL clearly
+    if (remoteRatingUrl || remoteRatingLongUrl) {
         const qrRemote = document.getElementById('qrRemoteRatingContainer');
         qrRemote.innerHTML = '';
-        new QRCode(qrRemote, { text: remoteRatingUrl, width: 120, height: 120 });
-        document.getElementById('remoteRatingInput').value = remoteRatingUrl;
-        document.getElementById('remoteRatingLongInput').value = remoteRatingLongUrl || remoteRatingUrl;
-        document.getElementById('waRemoteRating').href = 'https://wa.me/?text=' + encodeURIComponent('Halo, terima kasih telah berkunjung ke BPS. Anda dapat mengisi penilaian layanan kami dari rumah melalui link ini: ' + remoteRatingUrl);
-        document.getElementById('waRemoteRatingFull').href = 'https://wa.me/?text=' + encodeURIComponent('Halo, terima kasih telah berkunjung ke BPS. Anda dapat mengisi penilaian layanan kami dari rumah melalui link ini: ' + (remoteRatingLongUrl || remoteRatingUrl));
+        // Use shortlink for QR if available, otherwise skip QR
+        const qrUrl = remoteRatingUrl; // Only use shortlink for QR, long URL is too long
+        if (qrUrl) {
+            try {
+                new QRCode(qrRemote, { text: qrUrl, width: 120, height: 120 });
+            } catch(e) {
+                qrRemote.innerHTML = '<small class="text-danger">QR tidak tersedia<br>(URL terlalu panjang)</small>';
+                console.error('QR Remote Rating Error:', e);
+            }
+        } else {
+            qrRemote.innerHTML = '<small class="text-warning">QR tidak tersedia<br>(Shortlink gagal)</small>';
+        }
+        // Short URL field: only show shortlink (is.gd), or "Tidak tersedia" if no shortlink
+        document.getElementById('remoteRatingInput').value = remoteRatingUrl || '(Shortlink tidak tersedia)';
+        // Long URL field: always show the long URL
+        document.getElementById('remoteRatingLongInput').value = remoteRatingLongUrl || '';
+        // WA buttons: use the appropriate URL
+        document.getElementById('waRemoteRating').href = remoteRatingUrl 
+            ? 'https://wa.me/?text=' + encodeURIComponent('Halo, terima kasih telah berkunjung ke BPS. Anda dapat mengisi penilaian layanan kami dari rumah melalui link ini: ' + remoteRatingUrl)
+            : 'https://wa.me/?text=' + encodeURIComponent('Halo, terima kasih telah berkunjung ke BPS. Anda dapat mengisi penilaian layanan kami dari rumah melalui link ini: ' + remoteRatingLongUrl);
+        document.getElementById('waRemoteRatingFull').href = 'https://wa.me/?text=' + encodeURIComponent('Halo, terima kasih telah berkunjung ke BPS. Anda dapat mengisi penilaian layanan kami dari rumah melalui link ini: ' + remoteRatingLongUrl);
         remoteRatingCol.style.display = 'block';
     } else {
         remoteRatingCol.style.display = 'none';
     }
 
-    // Handle SKD Content
+    // Handle SKD Content - show both short and long URL clearly
     if (skdToken) {
         const qrSkd = document.getElementById('qrSkdContainer');
         qrSkd.innerHTML = '';
-        new QRCode(qrSkd, { text: fullSkdUrl, width: 120, height: 120 });
-        document.getElementById('skdInput').value = fullSkdUrl;
-        document.getElementById('skdLongInput').value = finalSkdLongUrl;
-        document.getElementById('waSkd').href = 'https://wa.me/?text=' + encodeURIComponent('Halo, mohon bantu kami meningkatkan kualitas data dengan mengisi Survei SKD melalui link: ' + fullSkdUrl);
+        // Use shortlink for QR if available, otherwise skip QR
+        const skdQrUrl = fullSkdUrl; // Only use shortlink for QR, long URL is too long
+        if (skdQrUrl) {
+            try {
+                new QRCode(qrSkd, { text: skdQrUrl, width: 120, height: 120 });
+            } catch(e) {
+                qrSkd.innerHTML = '<small class="text-danger">QR tidak tersedia<br>(URL terlalu panjang)</small>';
+                console.error('QR SKD Error:', e);
+            }
+        } else {
+            qrSkd.innerHTML = '<small class="text-warning">QR tidak tersedia<br>(Shortlink gagal)</small>';
+        }
+        // Short URL field: only show shortlink (is.gd), or "Tidak tersedia" if no shortlink
+        document.getElementById('skdInput').value = fullSkdUrl || '(Shortlink tidak tersedia)';
+        // Long URL field: always show the long URL
+        document.getElementById('skdLongInput').value = finalSkdLongUrl || '';
+        // WA buttons: use the appropriate URL
+        document.getElementById('waSkd').href = fullSkdUrl 
+            ? 'https://wa.me/?text=' + encodeURIComponent('Halo, mohon bantu kami meningkatkan kualitas data dengan mengisi Survei SKD melalui link: ' + fullSkdUrl)
+            : 'https://wa.me/?text=' + encodeURIComponent('Halo, mohon bantu kami meningkatkan kualitas data dengan mengisi Survei SKD melalui link: ' + finalSkdLongUrl);
         document.getElementById('waSkdFull').href = 'https://wa.me/?text=' + encodeURIComponent('Halo, mohon bantu kami meningkatkan kualitas data dengan mengisi Survei SKD melalui link: ' + finalSkdLongUrl);
         skdCol.style.display = 'block';
     } else {
@@ -1505,6 +1611,40 @@ function showRatingLinkModal(ratingUrl, skdToken, remoteRatingUrl = null, skdSho
         document.getElementById('waInternalNotification').style.display = 'none';
     }
 
+    // Handle Visitor Notification Section
+    const visitorNotificationSection = document.getElementById('visitorNotificationSection');
+    if (visitorPhone || visitorEmail) {
+        visitorNotificationSection.style.display = 'block';
+        
+        // Store visitor info for email sending
+        window.currentVisitorData = {
+            name: visitorName,
+            phone: visitorPhone,
+            email: visitorEmail,
+            instansi: visitorInstansi,
+            layanan: visitorService,
+            keperluan: visitorPurpose,
+            status: status
+        };
+        
+        // WhatsApp notification to visitor
+        if (visitorPhone) {
+            let visitorWaMsg = `Halo ${visitorName || 'Bapak/Ibu'},\n\nTerima kasih telah mengunjungi Pelayanan Statistik Terpadu BPS.\n\n📋 *Data Kunjungan Anda:*\n*Layanan:* ${visitorService || '-'}\n*Keperluan:* ${visitorPurpose || '-'}\n*Status:* ${status}\n\nPetugas kami akan segera memproses permintaan Anda. Mohon menunggu informasi selanjutnya.\n\n_Salam,_\n_Tim PST BPS_`;
+            document.getElementById('waVisitorBtn').href = `https://wa.me/${visitorPhone}?text=${encodeURIComponent(visitorWaMsg)}`;
+        } else {
+            document.getElementById('waVisitorBtn').classList.add('disabled');
+            document.getElementById('waVisitorBtn').removeAttribute('href');
+        }
+        
+        // Email button disabled if no email
+        if (!visitorEmail) {
+            document.getElementById('emailVisitorBtn').disabled = true;
+            document.getElementById('emailVisitorBtn').classList.add('disabled');
+        }
+    } else {
+        visitorNotificationSection.style.display = 'none';
+    }
+
     var myModal = new bootstrap.Modal(document.getElementById('ratingLinkModal'));
     myModal.show();
 }
@@ -1533,6 +1673,63 @@ function formatPhoneNumber(input) {
     value = value.substring(0, 15);
     
     input.value = value;
+}
+
+// Send Email notification to visitor
+function sendVisitorEmail() {
+    const data = window.currentVisitorData;
+    if (!data || !data.email) {
+        showToast('Email pengunjung tidak tersedia', 'error');
+        return;
+    }
+    
+    const btn = document.getElementById('emailVisitorBtn');
+    const statusDiv = document.getElementById('emailStatus');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengirim...';
+    statusDiv.style.display = 'none';
+    
+    fetch('/api/send-visitor-notification', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+            email: data.email,
+            name: data.name,
+            instansi: data.instansi,
+            layanan: data.layanan,
+            keperluan: data.keperluan,
+            status: data.status
+        })
+    })
+    .then(res => res.json())
+    .then(response => {
+        btn.innerHTML = '<i class="fas fa-envelope"></i> Email';
+        if (response.success) {
+            btn.disabled = true;
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-secondary');
+            btn.innerHTML = '<i class="fas fa-check"></i> Terkirim';
+            statusDiv.innerHTML = '<span class="text-success"><i class="fas fa-check-circle"></i> Email konfirmasi berhasil terkirim!</span>';
+            statusDiv.style.display = 'block';
+            showToast('Email konfirmasi berhasil terkirim!', 'success');
+        } else {
+            btn.disabled = false;
+            statusDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle"></i> ' + (response.message || 'Gagal mengirim email') + '</span>';
+            statusDiv.style.display = 'block';
+            showToast('Gagal mengirim email: ' + (response.message || 'Unknown error'), 'error');
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-envelope"></i> Email';
+        statusDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle"></i> Error: ' + err.message + '</span>';
+        statusDiv.style.display = 'block';
+        showToast('Error: ' + err.message, 'error');
+    });
 }
 
 // Visitor Edit Logic
@@ -1575,6 +1772,11 @@ function loadMyServices() {
                                     `<span class="badge bg-warning-subtle text-warning border-warning-subtle small" id="skd-badge-${s.skd_token}"><i class="fas fa-clock"></i> SKD</span>`
                                 ) : ''}
                                 ${s.rated ? '<span class="badge bg-info-subtle text-info border-info-subtle small"><i class="fas fa-star"></i> Rated</span>' : ''}
+                                ${s.jenis_layanan && s.jenis_layanan.includes('Permintaan Data') ? (
+                                    s.surat_lengkap ? 
+                                    '<span class="badge bg-success-subtle text-success border-success-subtle small"><i class="fas fa-file-check"></i> Surat Lengkap</span>' : 
+                                    '<span class="badge bg-warning-subtle text-warning border-warning-subtle small"><i class="fas fa-file-alt"></i> Surat Belum Lengkap</span>'
+                                ) : ''}
                             </div>
                             <p class="mb-1 text-muted small text-truncate"><i class="fas fa-building me-1"></i> ${s.instansi}</p>
                             <small class="text-muted d-block text-truncate"><i class="fas fa-file-invoice me-1"></i> No. Surat: ${s.nomor_surat || '-'}</small>
@@ -1596,7 +1798,7 @@ function loadMyServices() {
                                     <i class="fas fa-user-edit"></i> Edit Data
                                 </button>
                                 ${s.status_layanan !== 'Selesai' ? `
-                                    <button class="btn btn-xs btn-primary" onclick="openUpdateModal(${s.id}, '${s.nama_pengunjung}', '${s.nomor_surat || '-'}', '${s.status_layanan}', '${s.jenis_layanan}')">
+                                    <button class="btn btn-xs btn-primary" onclick="openUpdateModal(${s.id}, '${s.nama_pengunjung}', '${s.nomor_surat || '-'}', '${s.status_layanan}', '${s.jenis_layanan}', ${s.permintaan_data_id || 'null'})">
                                         <i class="fas fa-edit"></i> Update
                                     </button>
                                 ` : ''}
@@ -1606,12 +1808,12 @@ function loadMyServices() {
                                     </button>
                                 ` : ''}
                                 ${s.rating_token && !s.rated ? `
-                                    <button class="btn btn-xs btn-outline-warning" onclick="showRatingLinkModal('${window.location.origin}/rating/${s.rating_token}', '${s.skd_token || ''}', '${s.remote_rating_url || ''}', '${s.skd_short_url || ''}', '${s.remote_rating_long_url || ''}', '${s.skd_long_url || ''}', null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\'")}', '${s.link_monitor || ''}')">
+                                    <button class="btn btn-xs btn-outline-warning" onclick="showRatingLinkModal('${window.location.origin}/rating/${s.rating_token}', '${s.skd_token || ''}', '${s.remote_rating_url || ''}', '${s.skd_short_url || ''}', '${s.remote_rating_long_url || ''}', '${s.skd_long_url || ''}', null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\'")}', '${s.link_monitor || ''}', '${s.no_hp || ''}', '${s.email || ''}', '${s.status_layanan}')">
                                         <i class="fas fa-star"></i> Rating
                                     </button>
                                 ` : ''}
                                 ${s.skd_token ? `
-                                    <button class="btn btn-xs btn-outline-success" onclick="showRatingLinkModal(null, '${s.skd_token}', null, '${s.skd_short_url || ''}', null, '${s.skd_long_url || ''}', null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\'")}', '${s.link_monitor || ''}')">
+                                    <button class="btn btn-xs btn-outline-success" onclick="showRatingLinkModal(null, '${s.skd_token}', null, '${s.skd_short_url || ''}', null, '${s.skd_long_url || ''}', null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\'")}', '${s.link_monitor || ''}', '${s.no_hp || ''}', '${s.email || ''}', '${s.status_layanan}')">
                                         <i class="fas fa-link"></i> SKD
                                     </button>
                                 ` : ''}
@@ -1629,16 +1831,16 @@ function loadMyServices() {
                                     <li><button class="dropdown-item" onclick="openLinkMonitorModal(${s.id}, '${s.link_monitor || ''}')"><i class="fas fa-link"></i> Link Monitor</button></li>
                                     <li><button class="dropdown-item" onclick="openEditVisitorModal(${s.id})"><i class="fas fa-user-edit"></i> Edit Data</button></li>
                                     ${s.status_layanan !== 'Selesai' ? `
-                                        <li><button class="dropdown-item text-primary fw-bold" onclick="openUpdateModal(${s.id}, '${s.nama_pengunjung}', '${s.nomor_surat || '-'}', '${s.status_layanan}', '${s.jenis_layanan}')"><i class="fas fa-edit"></i> Update Status</button></li>
+                                        <li><button class="dropdown-item text-primary fw-bold" onclick="openUpdateModal(${s.id}, '${s.nama_pengunjung}', '${s.nomor_surat || '-'}', '${s.status_layanan}', '${s.jenis_layanan}', ${s.permintaan_data_id || 'null'})"><i class="fas fa-edit"></i> Update Status</button></li>
                                     ` : ''}
                                     ${s.file_surat ? `
                                         <li><button class="dropdown-item" onclick="previewDocument('${s.file_surat}')"><i class="fas fa-eye"></i> Preview Surat</button></li>
                                     ` : ''}
                                     ${s.rating_token && !s.rated ? `
-                                        <li><button class="dropdown-item text-warning" onclick="showRatingLinkModal('${window.location.origin}/rating/${s.rating_token}', '${s.skd_token || ''}', '${s.remote_rating_url || ''}', '${s.skd_short_url || ''}', '${s.remote_rating_long_url || ''}', '${s.skd_long_url || ''}', null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\'")}', '${s.link_monitor || ''}')"><i class="fas fa-star"></i> Kirim Rating WA</button></li>
+                                        <li><button class="dropdown-item text-warning" onclick="showRatingLinkModal('${window.location.origin}/rating/${s.rating_token}', '${s.skd_token || ''}', '${s.remote_rating_url || ''}', '${s.skd_short_url || ''}', '${s.remote_rating_long_url || ''}', '${s.skd_long_url || ''}', null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\'")}', '${s.link_monitor || ''}', '${s.no_hp || ''}', '${s.email || ''}', '${s.status_layanan}')"><i class="fas fa-star"></i> Kirim Rating WA</button></li>
                                     ` : ''}
                                     ${s.skd_token ? `
-                                        <li><button class="dropdown-item text-success" onclick="showRatingLinkModal(null, '${s.skd_token}', null, '${s.skd_short_url || ''}', null, '${s.skd_long_url || ''}', null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\'")}', '${s.link_monitor || ''}')"><i class="fas fa-link"></i> Kirim Link SKD WA</button></li>
+                                        <li><button class="dropdown-item text-success" onclick="showRatingLinkModal(null, '${s.skd_token}', null, '${s.skd_short_url || ''}', null, '${s.skd_long_url || ''}', null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\'")}', '${s.link_monitor || ''}', '${s.no_hp || ''}', '${s.email || ''}', '${s.status_layanan}')"><i class="fas fa-link"></i> Kirim Link SKD WA</button></li>
                                     ` : ''}
                                     ${s.status_layanan === 'Selesai' && s.skd_token && !s.skd_filled ? `
                                         <li><button class="dropdown-item" onclick="checkSkdStatus('${s.skd_token}', true)"><i class="fas fa-sync-alt"></i> Refresh Status SKD</button></li>
@@ -1705,8 +1907,23 @@ function openEditVisitorModal(id) {
     const jenis = jenisText.split(', ');
     document.getElementById('edit_konsultasi').checked = jenis.includes('Konsultasi');
     document.getElementById('edit_permintaan').checked = jenis.includes('Permintaan Data');
+    document.getElementById('edit_rekomendasi').checked = jenis.includes('Rekomendasi Statistik');
+    document.getElementById('edit_perpustakaan').checked = jenis.includes('Perpustakaan');
     document.getElementById('edit_pengaduan').checked = jenis.includes('Pengaduan');
-    document.getElementById('edit_lainnya').checked = jenis.includes('Lainnya');
+    
+    // Check for Lainnya (any value that doesn't match standard types)
+    const standardTypes = ['Konsultasi', 'Permintaan Data', 'Rekomendasi Statistik', 'Perpustakaan', 'Pengaduan', 'Lainnya'];
+    const hasLainnya = jenis.includes('Lainnya') || jenis.some(j => !standardTypes.includes(j) && j.trim() !== '');
+    document.getElementById('edit_lainnya').checked = hasLainnya;
+    
+    // If there's a custom type (non-standard), put it in the Lainnya input
+    const customTypes = jenis.filter(j => !standardTypes.includes(j) && j.trim() !== '');
+    if (customTypes.length > 0) {
+        document.getElementById('edit_jenis_layanan_lainnya').value = customTypes.join(', ');
+    } else {
+        document.getElementById('edit_jenis_layanan_lainnya').value = s.jenis_layanan_lainnya || '';
+    }
+    toggleEditLainnyaField();
 
     // Radios for Sarana
     if (s.sarana_kunjungan === 'Online') {
@@ -1750,6 +1967,21 @@ function toggleEditOnlineDetails() {
 function toggleEditPegawaiSelect() {
     const isPegawai = document.getElementById('edit_channelPegawai').checked;
     document.getElementById('editPegawaiSelectField').style.display = isPegawai ? 'block' : 'none';
+}
+
+function toggleEditLainnyaField() {
+    const lainnya = document.getElementById('edit_lainnya');
+    const lainnyaField = document.getElementById('editLainnyaField');
+    const lainnyaInput = document.getElementById('edit_jenis_layanan_lainnya');
+    
+    if (lainnya && lainnya.checked) {
+        lainnyaField.style.display = 'block';
+        lainnyaInput.required = true;
+    } else {
+        lainnyaField.style.display = 'none';
+        lainnyaInput.required = false;
+        lainnyaInput.value = '';
+    }
 }
 
 // Edit Modal Handler Functions
@@ -1973,8 +2205,9 @@ function updateLocalSkdStatus(token) {
 
 let currentServiceType = '';
 
-function openUpdateModal(id, pengunjung, noSurat, status, jenisLayanan) {
+function openUpdateModal(id, pengunjung, noSurat, status, jenisLayanan, permintaanDataId) {
     currentServiceId = id;
+    currentPermintaanDataId = permintaanDataId;
     currentServiceType = jenisLayanan || '';
     document.getElementById('modalPengunjung').textContent = pengunjung;
     document.getElementById('modalNoSurat').textContent = noSurat;
@@ -2002,17 +2235,28 @@ function openUpdateModal(id, pengunjung, noSurat, status, jenisLayanan) {
         document.getElementById('replyLetterDraft').style.display = 'none';
         document.getElementById('btnShowReplyForm').style.display = 'block';
 
-        fetch(`/api/replies/${id}`)
-            .then(res => res.json())
+        if (permintaanDataId && permintaanDataId !== 'null') {
+            fetch(`/api/replies/${permintaanDataId}`)
+                .then(res => res.json())
             .then(data => {
                 if (data.success && data.reply) {
                     document.getElementById('btnShowReplyForm').style.display = 'none';
                     document.getElementById('replyLetterPreview').style.display = 'block';
                     document.getElementById('previewReplyNomor').textContent = data.reply.nomor_surat;
                     document.getElementById('previewReplyTujuan').textContent = 'Penerima: ' + data.reply.tujuan;
+                    
+                    // Also populate the fields in the draft form (even if hidden)
+                    // This is crucial for generateWordDocument to work without re-generating
+                    document.getElementById('modalReplyNomor').value = data.reply.nomor_surat;
+                    document.getElementById('modalReplyTujuan').value = data.reply.tujuan;
+                    document.getElementById('modalReplyPerihal').value = data.reply.perihal || '';
+                    document.getElementById('modalReplyUrut').value = data.reply.nomor_urut || '';
+                    document.getElementById('modalReplyKode').value = data.reply.kode_surat || '';
+                    document.getElementById('modalReplyTanggal').value = data.reply.tanggal_surat || '';
                 }
             })
             .catch(err => console.log('No reply found or error:', err));
+        }
     }
 
     var modal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
@@ -2020,28 +2264,32 @@ function openUpdateModal(id, pengunjung, noSurat, status, jenisLayanan) {
 }
 
 function toggleReportFields() {
-    const status = document.getElementById('modalStatus').value;
+    const statusField = document.getElementById('modalStatus');
+    const status = statusField ? statusField.value : '';
     const reportFields = document.getElementById('reportFields');
     const commonReports = document.getElementById('commonReportFields');
     const permintaanDataFields = document.getElementById('permintaanDataFields');
     
-    const isSelesai = (status === 'Selesai');
-    const isConsultationOrComplaint = currentServiceType.includes('Konsultasi') || currentServiceType.includes('Pengaduan');
-    const isDataRequest = currentServiceType.includes('Permintaan Data');
+    const statusVal = status.toLowerCase();
+    const isSelesai = (statusVal === 'selesai');
+    const isDiproses = (statusVal === 'diproses');
+    const currentType = (currentServiceType || '').toLowerCase();
+    const isConsultationOrComplaint = currentType.includes('konsultasi') || currentType.includes('pengaduan') || currentType.includes('rekomendasi statistik');
+    const isDataRequest = currentType.includes('permintaan data');
     
-    if (isSelesai) {
-        reportFields.style.display = 'block';
-        
-        // Show common fields only for Consultation or Complaints
-        commonReports.style.display = isConsultationOrComplaint ? 'block' : 'none';
-        
-        // Show data fields only for Data Requests
-        permintaanDataFields.style.display = isDataRequest ? 'block' : 'none';
-    } else {
-        reportFields.style.display = 'none';
-        commonReports.style.display = 'none';
-        permintaanDataFields.style.display = 'none';
-    }
+    // Safety check for elements
+    if (!reportFields || !permintaanDataFields) return;
+
+    // reportFields MUST be visible if it's Selesai OR if it's a Data Request in Diproses status
+    // (because permintaanDataFields is nested inside reportFields)
+    const shouldShowReportSection = isSelesai || (isDiproses && isDataRequest);
+    reportFields.style.display = shouldShowReportSection ? 'block' : 'none';
+    
+    // Summary and Photo are only for Selesai
+    if (commonReports) commonReports.style.display = (isSelesai && isConsultationOrComplaint) ? 'block' : 'none';
+    
+    // For Data Requests: show tags and reply letter if Selesai OR Diproses
+    permintaanDataFields.style.display = (isDataRequest && (isSelesai || isDiproses)) ? 'block' : 'none';
 }
 
 // Add event listener for status change in modal
@@ -2057,7 +2305,7 @@ function submitUpdateStatus(event) {
     formData.append('catatan', document.getElementById('modalCatatan').value);
     
     if (status === 'Selesai') {
-        const isConsultationOrComplaint = currentServiceType.includes('Konsultasi') || currentServiceType.includes('Pengaduan');
+        const isConsultationOrComplaint = currentServiceType.includes('Konsultasi') || currentServiceType.includes('Pengaduan') || currentServiceType.includes('Rekomendasi Statistik');
         const isDataRequest = currentServiceType.includes('Permintaan Data');
 
         if (isConsultationOrComplaint) {
@@ -2065,7 +2313,14 @@ function submitUpdateStatus(event) {
             const ringkasan = document.getElementById('modalRingkasan').value;
             
             if (!topik || !ringkasan) {
-                showToast('Topik dan Ringkasan wajib diisi untuk Konsultasi/Pengaduan!', 'error');
+                showToast('Topik dan Ringkasan wajib diisi!', 'error');
+                return;
+            }
+            
+            // Validate at least 1 photo is uploaded
+            const photos = document.getElementById('modalFotoBukti').files;
+            if (photos.length === 0) {
+                showToast('Wajib upload minimal 1 foto bukti pelayanan!', 'error');
                 return;
             }
             
@@ -2073,7 +2328,7 @@ function submitUpdateStatus(event) {
             formData.append('ringkasan', ringkasan);
             formData.append('feedback_final', document.getElementById('modalFeedback').value);
 
-            const photos = document.getElementById('modalFotoBukti').files;
+            // photos variable already declared above for validation
             for (let i = 0; i < photos.length; i++) {
                 formData.append('foto_bukti[]', photos[i]);
             }
@@ -2113,17 +2368,31 @@ function submitUpdateStatus(event) {
         if (data.success) {
             // IF there is a reply letter draft, SAVE IT AS WELL
             if (document.getElementById('replyLetterDraft').style.display === 'block') {
-                saveReplyLetter(currentServiceId);
+                saveReplyLetter();
             }
 
             showToast('Status berhasil diupdate!', 'success');
             bootstrap.Modal.getInstance(document.getElementById('updateStatusModal')).hide();
             loadMyServices();
             
-            // Trigger SKD modal if status changed to Selesai
-            if (status === 'Selesai' && data.skd_token) {
-                showRatingLinkModal(null, data.skd_token, data.remote_rating_url || null, null, null, null, data.whatsapp_group_link, data.visitor_name, data.visitor_purpose, data.visitor_instansi, data.visitor_service, data.link_monitor || null);
-            }
+            // Offer notification for any status update
+            showRatingLinkModal(
+                null, 
+                data.skd_token, 
+                data.remote_rating_url || null, 
+                null, 
+                null, 
+                null, 
+                data.whatsapp_group_link, 
+                data.visitor_name, 
+                data.visitor_purpose, 
+                data.visitor_instansi, 
+                data.visitor_service, 
+                data.link_monitor || null,
+                data.visitor_phone,
+                data.visitor_email,
+                data.status
+            );
         } else {
             showToast('Error: ' + (data.message || 'Gagal update'), 'error');
         }
@@ -2135,9 +2404,13 @@ function submitUpdateStatus(event) {
     });
 }
 
-function saveReplyLetter(serviceId) {
+function saveReplyLetter() {
+    if (!currentPermintaanDataId) {
+        showToast('ID Permintaan Data tidak ditemukan', 'error');
+        return;
+    }
     const data = {
-        permintaan_data_id: serviceId,
+        permintaan_data_id: currentPermintaanDataId,
         nomor_surat: document.getElementById('modalReplyNomor').value,
         nomor_urut: document.getElementById('modalReplyUrut').value,
         tujuan: document.getElementById('modalReplyTujuan').value,
@@ -2147,26 +2420,46 @@ function saveReplyLetter(serviceId) {
         catatan: document.getElementById('modalCatatan').value
     };
 
+    const btn = event.target;
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    btn.disabled = true;
+
     fetch('/api/replies', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
         },
         body: JSON.stringify(data)
     })
     .then(res => res.json())
     .then(result => {
+        btn.innerHTML = oldHtml;
+        btn.disabled = false;
+        
         if (result.success) {
-            console.log('Reply letter saved successfully');
+            showToast('Nomor surat berhasil disimpan!', 'success');
+            document.getElementById('replyLetterDraft').style.display = 'none';
+            document.getElementById('replyLetterPreview').style.display = 'block';
+            document.getElementById('previewReplyNomor').textContent = data.nomor_surat;
+            document.getElementById('previewReplyTujuan').textContent = 'Penerima: ' + data.tujuan;
         } else {
-            console.error('Failed to save reply letter:', result.message);
+            showToast('Gagal menyimpan: ' + (result.message || 'Error'), 'error');
         }
+    })
+    .catch(err => {
+        btn.innerHTML = oldHtml;
+        btn.disabled = false;
+        showToast('Error: ' + err.message, 'error');
     });
 }
 
 function loadStatus() {
-    fetch('/api/services')
+    fetch('/api/services', {
+        headers: { 'Accept': 'application/json' }
+    })
         .then(res => res.json())
         .then(services => {
             // Count stats
@@ -2218,12 +2511,12 @@ function loadStatus() {
                     <td>
                         <div class="btn-group">
                             ${s.rating_token && !s.rated ? `
-                                <button class="btn btn-xs btn-outline-warning" onclick="showRatingLinkModal('${window.location.origin}/rating/${s.rating_token}', '${s.skd_token || ''}', '${s.remote_rating_url || ''}', null, null, null, null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\")}', '${s.link_monitor || ''}')" title="Lihat Link Rating">
+                                <button class="btn btn-xs btn-outline-warning" onclick="showRatingLinkModal('${window.location.origin}/rating/${s.rating_token}', '${s.skd_token || ''}', '${s.remote_rating_url || ''}', null, null, null, null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\'")}', '${s.link_monitor || ''}', '${s.no_hp || ''}', '${s.email || ''}', '${s.status_layanan}')" title="Lihat Link Rating">
                                     <i class="fas fa-star"></i>
                                 </button>
                             ` : ''}
                             ${s.skd_token ? `
-                                <button class="btn btn-xs btn-outline-success" onclick="showRatingLinkModal(null, '${s.skd_token}', null, null, null, null, null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\")}', '${s.link_monitor || ''}')" title="Lihat Link SKD">
+                                <button class="btn btn-xs btn-outline-success" onclick="showRatingLinkModal(null, '${s.skd_token}', null, null, null, null, null, '${(s.nama_pengunjung || "Pengunjung").replace(/'/g, "\\'")}', '${(s.keperluan || "-").replace(/'/g, "\\'").replace(/\n/g, " ")}', '${(s.instansi || "-").replace(/'/g, "\\'")}', '${(s.jenis_layanan || "-").replace(/'/g, "\\'")}', '${s.link_monitor || ''}', '${s.no_hp || ''}', '${s.email || ''}', '${s.status_layanan}')" title="Lihat Link SKD">
                                     <i class="fas fa-link"></i>
                                 </button>
                             ` : ''}
@@ -2491,6 +2784,68 @@ function removeReplyLetter() {
             document.getElementById('btnShowReplyForm').style.display = 'block';
             // Also need to clear hidden inputs or state if any
         }
+    });
+}
+
+function generateWordDocument() {
+    let nomorSurat = document.getElementById('modalReplyNomor').value;
+    let tanggalSurat = document.getElementById('modalReplyTanggal').value;
+    let tujuan = document.getElementById('modalReplyTujuan').value;
+    let perihal = document.getElementById('modalReplyPerihal').value;
+    let kode = document.getElementById('modalReplyKode').value;
+    let nomor_urut = document.getElementById('modalReplyUrut').value;
+    
+    // If fields are empty (re-opening modal), they should have been populated by openUpdateModal.
+    // This check is a safety fallback.
+    if (!nomorSurat) {
+        nomorSurat = document.getElementById('previewReplyNomor').textContent;
+    }
+    
+    if (!nomorSurat) {
+        showToast('Nomor surat belum di-generate', 'error');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    btn.disabled = true;
+    
+    fetch('/admin/reply-template/generate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+            service_id: currentPermintaanDataId,
+            nomor_surat: nomorSurat,
+            tanggal_surat: tanggalSurat,
+            tujuan: tujuan,
+            perihal: perihal,
+            kode_surat: kode,
+            nomor_urut: nomor_urut,
+            catatan: document.getElementById('modalCatatan').value
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        
+        if (data.success) {
+            showToast('Surat balasan berhasil dibuat!', 'success');
+            // Download the file
+            window.open(data.download_url, '_blank');
+        } else {
+            showToast('Gagal: ' + data.message, 'error');
+        }
+    })
+    .catch(err => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        showToast('Error: ' + err.message, 'error');
     });
 }
 </script>
